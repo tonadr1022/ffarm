@@ -19,11 +19,31 @@ Device :: struct {
     instance: VkInstance;
     physical_device: VkPhysicalDevice;
     device: VkDevice;
+    debug_messenger: VkDebugUtilsMessengerEXT;
 }
 
 device_init :: (settings: *DeviceSettings) -> Device {
-    create_info: VkInstanceCreateInfo;
     device: Device;
+
+    enabled_layers: [..]*u8;
+    defer array_free(enabled_layers);
+    enabled_extensions: [..]*u8;
+    defer array_free(enabled_extensions);
+
+    if settings.validation_layers_enabled {
+        array_add(*enabled_layers, "VK_LAYER_KHRONOS_validation");
+        array_add(*enabled_extensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
+
+    app_info: VkApplicationInfo;
+    app_info.apiVersion = VK_API_VERSION_1_0;
+
+    create_info: VkInstanceCreateInfo;
+    create_info.pApplicationInfo = *app_info;
+    create_info.enabledLayerCount = xx enabled_layers.count;
+    create_info.ppEnabledLayerNames = enabled_layers.data;
+    create_info.enabledExtensionCount = xx enabled_extensions.count;
+    create_info.ppEnabledExtensionNames = enabled_extensions.data;
 
     VK_CHECK(vkCreateInstance(*create_info, null, *device.instance));
 
@@ -62,11 +82,27 @@ device_init :: (settings: *DeviceSettings) -> Device {
     print("Vendor ID: %\n", properties.vendorID);
     print("Device ID: %\n", properties.deviceID);
 
-    enabled_layers: [..]*u8;
-    defer array_free(enabled_layers);
+    if settings.validation_layers_enabled {
+        debug_callback :: (message_severity: VkDebugUtilsMessageSeverityFlagsEXT, message_type: VkDebugUtilsMessageTypeFlagsEXT, pCallbackData: *VkDebugUtilsMessengerCallbackDataEXT, pUserData: *void) -> VkBool32 #c_call  {
+            push_context {
+                print("Validation layer: %\n", to_string(pCallbackData.pMessage));
+            }
+            return VK_FALSE;
+        }
 
-    if settings.validation_layers_enabled
-        array_add(*enabled_layers, "VK_LAYER_KHRONOS_validation".data);
+        debug_create_info: VkDebugUtilsMessengerCreateInfoEXT;
+        debug_create_info.messageSeverity = VkDebugUtilsMessageSeverityFlagsEXT.WARNING_BIT_EXT 
+            | VkDebugUtilsMessageSeverityFlagsEXT.ERROR_BIT_EXT;
+        debug_create_info.messageType = VkDebugUtilsMessageTypeFlagsEXT.GENERAL_BIT_EXT
+            | VkDebugUtilsMessageTypeFlagsEXT.VALIDATION_BIT_EXT
+            | VkDebugUtilsMessageTypeFlagsEXT.PERFORMANCE_BIT_EXT;
+        debug_create_info.pfnUserCallback = debug_callback;
+        debug_create_info.pUserData = null;
+
+        create_debug_utils_messenger := cast(PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(device.instance, "vkCreateDebugUtilsMessengerEXT");
+        assert(create_debug_utils_messenger != null);
+        VK_CHECK(create_debug_utils_messenger(device.instance, *debug_create_info, null, *device.debug_messenger));
+    }
 
     {
         queue_create_info: VkDeviceQueueCreateInfo;
@@ -82,8 +118,6 @@ device_init :: (settings: *DeviceSettings) -> Device {
         dev_create_info.pQueueCreateInfos = queue_create_infos.data;
         dev_create_info.enabledExtensionCount = 0;
         dev_create_info.ppEnabledExtensionNames = null;
-        dev_create_info.enabledLayerCount = xx enabled_layers.count;
-        dev_create_info.ppEnabledLayerNames = enabled_layers.data;
         VK_CHECK(vkCreateDevice(device.physical_device, *dev_create_info, null, *device.device));
     }
 
@@ -93,6 +127,14 @@ device_init :: (settings: *DeviceSettings) -> Device {
 
 device_free :: (device: *Device) {
     vkDestroyDevice(device.device, null);
+
+    if device.debug_messenger {
+        destroy_debug_utils_messenger := cast(PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(device.instance, "vkDestroyDebugUtilsMessengerEXT");
+        if destroy_debug_utils_messenger {
+            destroy_debug_utils_messenger(device.instance, device.debug_messenger, null);
+        }
+    }
+
     vkDestroyInstance(device.instance, null);
 }
 
