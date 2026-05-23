@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Build and Run",
+      "type": "node",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "runtimeExecutable": "${workspaceFolder}/build/main",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}
