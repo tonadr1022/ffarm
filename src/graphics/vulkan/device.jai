@@ -5,7 +5,7 @@ VK_CHECK :: (result: VkResult) {
     }
 }
 
-DeviceData :: struct {
+DeviceBackend :: struct {
     instance: VkInstance;
     physical_device: VkPhysicalDevice;
     device: VkDevice;
@@ -30,8 +30,7 @@ CommandPool :: struct {
 debug_callback_data: DebugCallbackData;
 
 device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
-    device := cast(*DeviceData) alloc(size_of(DeviceData));
-    rhi_device.backend_data = xx device;
+    using backend := *rhi_device.specific;
     enabled_layers: [..]*u8;
     defer array_free(enabled_layers);
     enabled_extensions: [..]*u8;
@@ -40,6 +39,11 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
     if settings.validation_layers_enabled {
         array_add(*enabled_layers, "VK_LAYER_KHRONOS_validation");
         array_add(*enabled_extensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
+
+    platform_extensions := platform_get_vulkan_instance_extensions();
+    for extension : platform_extensions {
+        array_add(*enabled_extensions, extension);
     }
 
     app_info: VkApplicationInfo;
@@ -52,15 +56,15 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
     create_info.enabledExtensionCount = xx enabled_extensions.count;
     create_info.ppEnabledExtensionNames = enabled_extensions.data;
 
-    VK_CHECK(vkCreateInstance(*create_info, null, *device.instance));
+    VK_CHECK(vkCreateInstance(*create_info, null, *backend.instance));
 
     physical_device_count: u32;
-    VK_CHECK(vkEnumeratePhysicalDevices(device.instance, *physical_device_count, null));
+    VK_CHECK(vkEnumeratePhysicalDevices(backend.instance, *physical_device_count, null));
     physical_devices: []VkPhysicalDevice;
     array_resize(*physical_devices, physical_device_count);
     defer array_free(physical_devices);
 
-    VK_CHECK(vkEnumeratePhysicalDevices(device.instance, *physical_device_count, physical_devices.data));
+    VK_CHECK(vkEnumeratePhysicalDevices(backend.instance, *physical_device_count, physical_devices.data));
 
     try_select_phys_dev :: (physical_devices: []VkPhysicalDevice, device_type: VkPhysicalDeviceType) -> VkPhysicalDevice {
         for phys_dev : physical_devices {
@@ -78,7 +82,7 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
         selected_phys_dev = try_select_phys_dev(physical_devices, .INTEGRATED_GPU);
     }
     selected_phys_dev = physical_devices[0];
-    device.physical_device = selected_phys_dev;
+    backend.physical_device = selected_phys_dev;
 
     properties: VkPhysicalDeviceProperties;
     vkGetPhysicalDeviceProperties(selected_phys_dev, *properties);
@@ -109,9 +113,9 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
         debug_create_info.pfnUserCallback = debug_callback;
         debug_create_info.pUserData = xx *debug_callback_data;
 
-        create_debug_utils_messenger := cast(PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(device.instance, "vkCreateDebugUtilsMessengerEXT");
+        create_debug_utils_messenger := cast(PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(backend.instance, "vkCreateDebugUtilsMessengerEXT");
         assert(create_debug_utils_messenger != null);
-        VK_CHECK(create_debug_utils_messenger(device.instance, *debug_create_info, null, *device.debug_messenger));
+        VK_CHECK(create_debug_utils_messenger(backend.instance, *debug_create_info, null, *backend.debug_messenger));
     }
 
     {
@@ -128,39 +132,39 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
         dev_create_info.pQueueCreateInfos = queue_create_infos.data;
         dev_create_info.enabledExtensionCount = 0;
         dev_create_info.ppEnabledExtensionNames = null;
-        VK_CHECK(vkCreateDevice(device.physical_device, *dev_create_info, null, *device.device));
+        VK_CHECK(vkCreateDevice(backend.physical_device, *dev_create_info, null, *backend.device));
     }
 
     // just graphics queue for now
     queue_count: u32;
-    vkGetPhysicalDeviceQueueFamilyProperties(device.physical_device, *queue_count, null);
+    vkGetPhysicalDeviceQueueFamilyProperties(backend.physical_device, *queue_count, null);
     queue_family_properties: []VkQueueFamilyProperties;
     array_resize(*queue_family_properties, queue_count);
     defer array_free(queue_family_properties);
-    vkGetPhysicalDeviceQueueFamilyProperties(device.physical_device, *queue_count, queue_family_properties.data);
+    vkGetPhysicalDeviceQueueFamilyProperties(backend.physical_device, *queue_count, queue_family_properties.data);
     index := 0;
     for queue_family_property : queue_family_properties {
         if queue_family_property.queueFlags & VkQueueFlags.GRAPHICS_BIT {
-            device.graphics_queue.queue_family_index = xx index;
+            backend.graphics_queue.queue_family_index = xx index;
             break;
         }
         index += 1;
     }
-    vkGetDeviceQueue(device.device, device.graphics_queue.queue_family_index, 0, *device.graphics_queue.queue);
+    vkGetDeviceQueue(backend.device, backend.graphics_queue.queue_family_index, 0, *backend.graphics_queue.queue);
 }
 
 device_free :: (rhi_device: *RHIDevice) {
-    device := cast(*DeviceData) rhi_device.backend_data;
-    vkDestroyDevice(device.device, null);
+    using backend := *rhi_device.specific;
+    vkDestroyDevice(backend.device, null);
 
-    if device.debug_messenger {
-        destroy_debug_utils_messenger := cast(PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(device.instance, "vkDestroyDebugUtilsMessengerEXT");
+    if backend.debug_messenger {
+        destroy_debug_utils_messenger := cast(PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(backend.instance, "vkDestroyDebugUtilsMessengerEXT");
         if destroy_debug_utils_messenger {
-            destroy_debug_utils_messenger(device.instance, device.debug_messenger, null);
+            destroy_debug_utils_messenger(backend.instance, backend.debug_messenger, null);
         }
     }
 
-    vkDestroyInstance(device.instance, null);
+    vkDestroyInstance(backend.instance, null);
 }
 
 #import "Vulkan";

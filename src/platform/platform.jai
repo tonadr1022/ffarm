@@ -4,3 +4,5 @@
 } else {
     #assert false, "Unsupported platform";
 }
+
+#load "types.jai";

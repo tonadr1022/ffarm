@@ -1,6 +1,7 @@
 Renderer :: struct {
     device: RHIDevice;
     window: *Window;
+    // command_pools: [..]RHICommandPool;
 }
 
 renderer: Renderer;
@@ -9,6 +10,7 @@ renderer_init :: (window: *Window) {
     settings: RHIDeviceSettings = .{exit_on_validation_layer_error=true, validation_layers_enabled=true};
     device_init(*renderer.device, *settings);
     renderer.window = window;
+    assert(renderer.window.specific.sdl_window != null);
     window_device_init(renderer.window, *renderer.device);
     print("Renderer initialized\n");
 }

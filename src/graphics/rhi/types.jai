@@ -4,7 +4,7 @@ RHIDeviceSettings :: struct {
 }
 
 RHIDevice :: struct {
-    backend_data: *void;
+    specific: DeviceBackend;
 }
 
 RHICommandQueue :: struct {
