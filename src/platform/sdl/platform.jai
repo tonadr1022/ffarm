@@ -1,0 +1,9 @@
+#import("jai-sdl3");
+#import "Basic";
+
+platform_init :: () {
+    if !SDL_Init(SDL_InitFlags.VIDEO | SDL_InitFlags.EVENTS) {
+        print("Failed to init SDL: %\n", to_string(SDL_GetError()));
+        exit(1);
+    }
+}

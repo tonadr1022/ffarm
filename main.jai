@@ -1,17 +1,12 @@
 #import "Basic";
-#import("jai-sdl3");
-#load "src/graphics/device.jai";
+#load "src/platform/platform.jai";
+#load "src/graphics/renderer/renderer.jai";
 
 main :: () {
-    if !SDL_Init(SDL_InitFlags.VIDEO | SDL_InitFlags.EVENTS) {
-        err_c_str := SDL_GetError();
-        print("Failed to init SDL: %\n", string.{data=err_c_str, count=c_style_strlen(err_c_str)});
-        exit(1);
-    }
-    window := SDL_CreateWindow("window", 800, 800, 0);
-    settings: DeviceSettings = .{exit_on_validation_layer_error=true, validation_layers_enabled=true};
-    device := device_init(*settings);
-    defer device_free(*device);
+    platform_init();
+    window: Window;
+    window_init(*window, "window", 800, 800);
+    renderer_init(*window);
 
     should_quit := false;
 
@@ -28,6 +23,8 @@ main :: () {
             }
         }
     }
+
+    renderer_shutdown();
 
     print("hello world!\n");
 }

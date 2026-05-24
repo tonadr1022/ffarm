@@ -6,7 +6,7 @@
       "type": "shell",
       "command": "./scripts/build.sh",
       "args": [
-        "-quiet"
+        "-quiet",
       ],
       "options": {
         "cwd": "${workspaceFolder}"

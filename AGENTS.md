@@ -5,3 +5,5 @@ This game is written in jai. The jai core libraries, compiler binary, and exampl
 To build the application, run ./scripts/build.sh
 
 The third_party/ dir contains third party libraries. Most or all have bindings for Jai generated with the bindings generator.
+
+For more context on the project, read ./PROJECT_SPEC.md

@@ -1,5 +1,3 @@
-#import "Vulkan";
-
 VK_CHECK :: (result: VkResult) {
     if result != VkResult.SUCCESS {
         print("Vulkan error: %", result);
@@ -7,12 +5,11 @@ VK_CHECK :: (result: VkResult) {
     }
 }
 
-Device :: struct {
+DeviceData :: struct {
     instance: VkInstance;
     physical_device: VkPhysicalDevice;
     device: VkDevice;
     debug_messenger: VkDebugUtilsMessengerEXT;
-
     graphics_queue: CommandQueue;
 }
 
@@ -30,13 +27,11 @@ CommandPool :: struct {
     queue_family_index: u32;
 }
 
-
-
 debug_callback_data: DebugCallbackData;
 
-device_init :: (settings: *DeviceSettings) -> Device {
-    device: Device;
-
+device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
+    device := cast(*DeviceData) alloc(size_of(DeviceData));
+    rhi_device.backend_data = xx device;
     enabled_layers: [..]*u8;
     defer array_free(enabled_layers);
     enabled_extensions: [..]*u8;
@@ -152,11 +147,10 @@ device_init :: (settings: *DeviceSettings) -> Device {
         index += 1;
     }
     vkGetDeviceQueue(device.device, device.graphics_queue.queue_family_index, 0, *device.graphics_queue.queue);
-
-    return device;
 }
 
-device_free :: (device: *Device) {
+device_free :: (rhi_device: *RHIDevice) {
+    device := cast(*DeviceData) rhi_device.backend_data;
     vkDestroyDevice(device.device, null);
 
     if device.debug_messenger {
@@ -168,3 +162,5 @@ device_free :: (device: *Device) {
 
     vkDestroyInstance(device.instance, null);
 }
+
+#import "Vulkan";

@@ -9,4 +9,5 @@ git -C "$ROOT" submodule update --init --recursive third_party/jai-sdl3
 cd "$ROOT/third_party/jai-sdl3"
 git submodule update --init --recursive SDL
 
-jai generate.jai "$@"
+# TODO: only if vulkan build flag is set
+jai generate.jai - -vulkan "$@"
