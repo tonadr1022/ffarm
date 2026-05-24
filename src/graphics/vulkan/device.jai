@@ -11,11 +11,9 @@ DeviceBackend :: struct {
     device: VkDevice;
     debug_messenger: VkDebugUtilsMessengerEXT;
     graphics_queue: CommandQueue;
+    debug_callback_data: DebugCallbackData;
 }
 
-DebugCallbackData :: struct {
-    exit_on_error: bool;
-}
 
 CommandQueue :: struct {
     queue: VkQueue;
@@ -27,7 +25,9 @@ CommandPool :: struct {
     queue_family_index: u32;
 }
 
-debug_callback_data: DebugCallbackData;
+DebugCallbackData :: struct {
+    exit_on_error: bool;
+}
 
 device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
     using backend := *rhi_device.specific;
@@ -94,7 +94,7 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
     print("Device ID: %\n", properties.deviceID);
 
     if settings.validation_layers_enabled {
-        debug_callback_data.exit_on_error = settings.exit_on_validation_layer_error;
+        backend.debug_callback_data.exit_on_error = settings.exit_on_validation_layer_error;
         debug_callback :: (message_severity: VkDebugUtilsMessageSeverityFlagsEXT, message_type: VkDebugUtilsMessageTypeFlagsEXT, pCallbackData: *VkDebugUtilsMessengerCallbackDataEXT, pUserData: *void) -> VkBool32 #c_call  {
             push_context {
                 print("[VALIDATION_LAYER] %\n", to_string(pCallbackData.pMessage));
@@ -111,7 +111,7 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
             | VkDebugUtilsMessageTypeFlagsEXT.VALIDATION_BIT_EXT
             | VkDebugUtilsMessageTypeFlagsEXT.PERFORMANCE_BIT_EXT;
         debug_create_info.pfnUserCallback = debug_callback;
-        debug_create_info.pUserData = xx *debug_callback_data;
+        debug_create_info.pUserData = xx *backend.debug_callback_data;
 
         create_debug_utils_messenger := cast(PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(backend.instance, "vkCreateDebugUtilsMessengerEXT");
         assert(create_debug_utils_messenger != null);
