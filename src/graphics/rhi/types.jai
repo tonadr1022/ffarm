@@ -9,3 +9,7 @@ RHIDevice :: struct {
 
 RHICommandQueue :: struct {
 }
+
+RHISwapchain :: struct {
+    specific: SwapchainBackend;
+}
