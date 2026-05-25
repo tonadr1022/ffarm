@@ -23,6 +23,7 @@ VK_JAI_BINDING_DIR=$ROOT/third_party/Vulkan
 
 if [ ! -f "$VK_JAI_BINDING_DIR/vk.xml" ]; then
     # TODO: check for VULKAN_SDK and vk.xml existence
+    echo "initializing vulkan bindings..."
     cp "$VULKAN_SDK/share/vulkan/registry/vk.xml" "$VK_JAI_BINDING_DIR/vk.xml"
     cp "$VULKAN_SDK/share/vulkan/registry/video.xml" "$VK_JAI_BINDING_DIR/video.xml"
     CWD="$(pwd)"
