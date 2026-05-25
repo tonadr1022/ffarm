@@ -2,7 +2,12 @@ This will be an early prototype of a game. This directory is called ffarm, becau
 
 This game is written in jai. The jai core libraries, compiler binary, and examples can be found in $HOME/personal/jai.
 
-To build the application, run ./scripts/build.sh
+## Building
+./scripts/build.sh
+
+## Running
+./scripts/build.sh -quiet +Autorun
+
 
 The third_party/ dir contains third party libraries. Most or all have bindings for Jai generated with the bindings generator.
 
