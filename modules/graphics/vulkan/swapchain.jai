@@ -62,11 +62,11 @@ create_swapchain :: (device: *Device, surface: SurfaceT, width: s32, height: s32
 
     selected_present_mode: VkPresentModeKHR;
     if vsync {
-        selected_present_mode = VkPresentModeKHR.IMMEDIATE_KHR;
+        selected_present_mode = VkPresentModeKHR.IMMEDIATE;
     } else {
-        selected_present_mode = VkPresentModeKHR.FIFO_KHR;
+        selected_present_mode = VkPresentModeKHR.FIFO;
         for present_mode : present_modes {
-            if present_mode == VkPresentModeKHR.MAILBOX_KHR {
+            if present_mode == VkPresentModeKHR.MAILBOX {
                 selected_present_mode = present_mode;
                 break;
             }
@@ -81,9 +81,9 @@ create_swapchain :: (device: *Device, surface: SurfaceT, width: s32, height: s32
         imageColorSpace = surface_formats[selected_surface_format].colorSpace,
         imageExtent = .{xx width, xx height},
         imageArrayLayers = 1,
-        imageUsage = VkImageUsageFlags.COLOR_ATTACHMENT_BIT | VkImageUsageFlags.TRANSFER_DST_BIT,
-        preTransform = VkSurfaceTransformFlagBitsKHR.IDENTITY_BIT_KHR,
-        compositeAlpha = VkCompositeAlphaFlagBitsKHR.OPAQUE_BIT_KHR,
+        imageUsage = VkImageUsageFlags.COLOR_ATTACHMENT | VkImageUsageFlags.TRANSFER_DST,
+        preTransform = VkSurfaceTransformFlagBitsKHR.IDENTITY,
+        compositeAlpha = VkCompositeAlphaFlagBitsKHR.OPAQUE,
         // queueFamilyIndexCount = 0, TODO: this might be needed?
         // pQueueFamilyIndices = null,
         presentMode = selected_present_mode,

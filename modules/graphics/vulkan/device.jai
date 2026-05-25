@@ -130,11 +130,11 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
         }
 
         debug_create_info: VkDebugUtilsMessengerCreateInfoEXT;
-        debug_create_info.messageSeverity = VkDebugUtilsMessageSeverityFlagsEXT.WARNING_BIT_EXT 
-            | VkDebugUtilsMessageSeverityFlagsEXT.ERROR_BIT_EXT;
-        debug_create_info.messageType = VkDebugUtilsMessageTypeFlagsEXT.GENERAL_BIT_EXT
-            | VkDebugUtilsMessageTypeFlagsEXT.VALIDATION_BIT_EXT
-            | VkDebugUtilsMessageTypeFlagsEXT.PERFORMANCE_BIT_EXT;
+        debug_create_info.messageSeverity = VkDebugUtilsMessageSeverityFlagsEXT.WARNING
+            | VkDebugUtilsMessageSeverityFlagsEXT.ERROR;
+        debug_create_info.messageType = VkDebugUtilsMessageTypeFlagsEXT.GENERAL
+            | VkDebugUtilsMessageTypeFlagsEXT.VALIDATION
+            | VkDebugUtilsMessageTypeFlagsEXT.PERFORMANCE;
         debug_create_info.pfnUserCallback = debug_callback;
         debug_create_info.pUserData = xx *backend.debug_callback_data;
 
@@ -173,7 +173,7 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
     vkGetPhysicalDeviceQueueFamilyProperties(backend.physical_device, *queue_count, queue_family_properties.data);
     index := 0;
     for queue_family_property : queue_family_properties {
-        if queue_family_property.queueFlags & VkQueueFlags.GRAPHICS_BIT {
+        if queue_family_property.queueFlags & VkQueueFlags.GRAPHICS {
             backend.graphics_queue.queue_family_index = xx index;
             break;
         }
