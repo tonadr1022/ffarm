@@ -15,6 +15,10 @@ stage_sdl3_linux() {
     cp "$SDL3_SO" "$BUILD_DIR/libSDL3.so.0"
 }
 
+if [ ! -f $ROOT/third_party/jai-vma/bindings.jai ]; then
+    jai $ROOT/third_party/jai-vma/generate.jai
+fi
+
 stage_sdl3_linux
 
 cd "$ROOT"

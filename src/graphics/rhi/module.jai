@@ -19,6 +19,7 @@
     #load "../vulkan/surface.jai";
     #load "../vulkan/swapchain.jai";
     #load "../vulkan/command_pool.jai";
+    #load "../vulkan/buffer.jai";
 } else {
     #assert false "Backend not implemented";
 }
