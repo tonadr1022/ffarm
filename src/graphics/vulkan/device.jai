@@ -16,16 +16,16 @@ DeviceBackend :: struct {
     physical_device: VkPhysicalDevice;
     device: VkDevice;
     debug_messenger: VkDebugUtilsMessengerEXT;
-    graphics_queue: CommandQueue;
+    graphics_queue: CommandQueueBackend;
     debug_callback_data: DebugCallbackData;
 }
 
-CommandQueue :: struct {
+CommandQueueBackend :: struct {
     queue: VkQueue;
     queue_family_index: u32;
 }
 
-CommandPool :: struct {
+CommandPoolBackend :: struct {
     pool: VkCommandPool;
     queue_family_index: u32;
 }
@@ -34,7 +34,7 @@ DebugCallbackData :: struct {
     exit_on_error: bool;
 }
 
-device_init :: (backend: *RHIDevice, settings: *RHIDeviceSettings) {
+device_init :: (backend: *Device, settings: *DeviceSettings) {
     enabled_layers: [..]*u8;
     defer array_free(enabled_layers);
     enabled_extensions: [..]*u8;
@@ -161,7 +161,7 @@ device_init :: (backend: *RHIDevice, settings: *RHIDeviceSettings) {
     vkGetDeviceQueue(backend.device, backend.graphics_queue.queue_family_index, 0, *backend.graphics_queue.queue);
 }
 
-device_free :: (backend: *RHIDevice) {
+device_free :: (backend: *Device) {
     vkDestroyDevice(backend.device, null);
 
     if backend.debug_messenger {

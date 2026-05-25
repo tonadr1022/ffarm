@@ -5,13 +5,13 @@ SwapchainBackend :: struct {
     device: VkDevice;
 }
 
-swapchain_init :: (swapchain: *RHISwapchain, device: *RHIDevice, surface: RHISurface, width: s32, height: s32, vsync: bool) {
+swapchain_init :: (swapchain: *Swapchain, device: *Device, surface: SurfaceT, width: s32, height: s32, vsync: bool) {
     swapchain.device = device.device;
     vk_swapchain := create_swapchain(device, surface, width, height, vsync, VK_NULL_HANDLE);
     swapchain.swapchain = vk_swapchain;
 }
 
-swapchain_destroy :: (swapchain: *RHISwapchain) {
+swapchain_destroy :: (swapchain: *Swapchain) {
     vkDestroySwapchainKHR(swapchain.device, swapchain.swapchain, null);
 }
 
@@ -30,7 +30,7 @@ is_srgb_format :: (format: VkFormat) -> bool {
         || format == VkFormat.A8B8G8R8_SRGB_PACK32;
 }
 
-create_swapchain :: (device: *RHIDevice, surface: RHISurface, width: s32, height: s32, vsync: bool, old_swapchain: VkSwapchainKHR) -> VkSwapchainKHR {
+create_swapchain :: (device: *Device, surface: SurfaceT, width: s32, height: s32, vsync: bool, old_swapchain: VkSwapchainKHR) -> VkSwapchainKHR {
     vk_surface := cast(VkSurfaceKHR) surface._handle;
 
     surface_capabilities: VkSurfaceCapabilitiesKHR;

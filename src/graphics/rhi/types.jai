@@ -1,24 +1,24 @@
-RHIDeviceSettings :: struct {
+DeviceSettings :: struct {
     validation_layers_enabled: bool;
     exit_on_validation_layer_error: bool;
 }
 
-RHISurface :: struct {
+SurfaceT :: struct {
     _handle: u64;
 }
 
-RHIDevice :: struct {
+Device :: struct {
     using specific: DeviceBackend;
 }
 
-RHICommandQueue :: struct {
-    using specific: CommandQueue;
+CommandQueue :: struct {
+    using specific: CommandQueueBackend;
 }
 
-RHICommandPool :: struct {
-    using specific: CommandPool;
+CommandPool :: struct {
+    using specific: CommandPoolBackend;
 }
 
-RHISwapchain :: struct {
+Swapchain :: struct {
     using specific: SwapchainBackend;
 }

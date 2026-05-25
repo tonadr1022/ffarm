@@ -1,12 +1,12 @@
 #scope_file
 
-surface_to_vk :: (surface: RHISurface) -> VkSurfaceKHR {
+surface_to_vk :: (surface: SurfaceT) -> VkSurfaceKHR {
     return cast(VkSurfaceKHR) surface._handle;
 }
 
 #scope_export
 
-rhi_create_surface :: (device: *RHIDevice, sdl_window: *SDL_Window) -> RHISurface {
+create_surface :: (device: *Device, sdl_window: *SDL_Window) -> SurfaceT {
     vk_surface: VkSurfaceKHR;
     if !SDL_Vulkan_CreateSurface(sdl_window, device.instance, null, *vk_surface) {
         print("Failed to create Vulkan surface: %\n", to_string(SDL_GetError()));
@@ -16,7 +16,7 @@ rhi_create_surface :: (device: *RHIDevice, sdl_window: *SDL_Window) -> RHISurfac
     return .{_handle = xx vk_surface};
 }
 
-rhi_destroy_surface :: (device: *RHIDevice, surface: RHISurface) {
+destroy_surface :: (device: *Device, surface: SurfaceT) {
     vk_surface := surface_to_vk(surface);
     assert(vk_surface != null);
     assert(device.instance != null);

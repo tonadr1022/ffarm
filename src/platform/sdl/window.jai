@@ -1,6 +1,6 @@
 WindowBackend :: struct {
     sdl_window: *SDL_Window;
-    surface: RHISurface;
+    surface: SurfaceT;
 }
 
 window_init :: (window: *Window, title: string, width: s32, height: s32) -> bool {
