@@ -1,6 +1,7 @@
 Renderer :: struct {
     device: RHIDevice;
     window: *Window;
+    swapchain: RHISwapchain;
     // command_pools: [..]RHICommandPool;
 }
 
@@ -12,10 +13,13 @@ renderer_init :: (window: *Window) {
     renderer.window = window;
     assert(renderer.window.specific.sdl_window != null);
     window_device_init(renderer.window, *renderer.device);
+    vsync :: true;
+    swapchain_init(*renderer.swapchain, *renderer.device, renderer.window, vsync);
     print("Renderer initialized\n");
 }
 
 renderer_shutdown :: () { 
+    swapchain_destroy(*renderer.swapchain);
     window_device_deinit(renderer.window);
     device_free(*renderer.device);
 }

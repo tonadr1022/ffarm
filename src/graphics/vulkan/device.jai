@@ -29,8 +29,7 @@ DebugCallbackData :: struct {
     exit_on_error: bool;
 }
 
-device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
-    using backend := *rhi_device.specific;
+device_init :: (backend: *RHIDevice, settings: *RHIDeviceSettings) {
     enabled_layers: [..]*u8;
     defer array_free(enabled_layers);
     enabled_extensions: [..]*u8;
@@ -118,6 +117,10 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
         VK_CHECK(create_debug_utils_messenger(backend.instance, *debug_create_info, null, *backend.debug_messenger));
     }
 
+    device_extensions: [..]*u8;
+    defer array_free(device_extensions);
+    array_add(*device_extensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
     {
         queue_create_info: VkDeviceQueueCreateInfo;
         queue_create_info.queueFamilyIndex = 0;
@@ -130,8 +133,8 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
         dev_create_info: VkDeviceCreateInfo;
         dev_create_info.queueCreateInfoCount = queue_create_infos.count;
         dev_create_info.pQueueCreateInfos = queue_create_infos.data;
-        dev_create_info.enabledExtensionCount = 0;
-        dev_create_info.ppEnabledExtensionNames = null;
+        dev_create_info.enabledExtensionCount = xx device_extensions.count;
+        dev_create_info.ppEnabledExtensionNames = device_extensions.data;
         VK_CHECK(vkCreateDevice(backend.physical_device, *dev_create_info, null, *backend.device));
     }
 
@@ -153,8 +156,7 @@ device_init :: (rhi_device: *RHIDevice, settings: *RHIDeviceSettings) {
     vkGetDeviceQueue(backend.device, backend.graphics_queue.queue_family_index, 0, *backend.graphics_queue.queue);
 }
 
-device_free :: (rhi_device: *RHIDevice) {
-    using backend := *rhi_device.specific;
+device_free :: (backend: *RHIDevice) {
     vkDestroyDevice(backend.device, null);
 
     if backend.debug_messenger {
@@ -165,6 +167,10 @@ device_free :: (rhi_device: *RHIDevice) {
     }
 
     vkDestroyInstance(backend.instance, null);
+}
+
+device_get_vk_device :: (backend: *RHIDevice) -> VkDevice {
+    return backend.device;
 }
 
 #import "Vulkan";

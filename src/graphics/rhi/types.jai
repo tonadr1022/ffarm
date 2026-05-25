@@ -4,12 +4,12 @@ RHIDeviceSettings :: struct {
 }
 
 RHIDevice :: struct {
-    specific: DeviceBackend;
+    using specific: DeviceBackend;
 }
 
 RHICommandQueue :: struct {
 }
 
 RHISwapchain :: struct {
-    specific: SwapchainBackend;
+    using specific: SwapchainBackend;
 }

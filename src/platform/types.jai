@@ -1,4 +1,3 @@
-
 Window :: struct {
-    specific: WindowBackend;
+    using specific: WindowBackend;
 }
