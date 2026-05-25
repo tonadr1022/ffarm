@@ -20,6 +20,10 @@ CommandPool :: struct {
     using specific: CommandPoolBackend;
 }
 
+CommandBuffer :: struct {
+    using specific: CommandBufferBackend;
+}
+
 Swapchain :: struct {
     using specific: SwapchainBackend;
 }

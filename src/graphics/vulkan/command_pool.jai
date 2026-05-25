@@ -9,6 +9,15 @@ command_pool_destroy :: (pool: *CommandPool, device: *Device) {
     vkDestroyCommandPool(device.device, pool.pool, null);
 }
 
-command_pool_alloc_buf :: (pool: *CommandPool) {
-
+command_pool_alloc_buf :: (pool: *CommandPool, device: *Device) -> CommandBuffer {
+    info := VkCommandBufferAllocateInfo.{
+        commandPool = pool.pool,
+        level = VkCommandBufferLevel.PRIMARY,
+        commandBufferCount = 1,
+    };
+    vk_cmd_buf: VkCommandBuffer;
+    VK_CHECK(vkAllocateCommandBuffers(device.device, *info, *vk_cmd_buf));
+    return .{vk_cmd_buffer=vk_cmd_buf};
 }
+
+#import "Vulkan";

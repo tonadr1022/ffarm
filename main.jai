@@ -24,6 +24,7 @@ main :: () {
                 case;
             }
         }
+        REN.do_render();
     }
 
     REN.shutdown();

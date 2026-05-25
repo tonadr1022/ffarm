@@ -1,4 +1,3 @@
-
 Renderer :: struct {
     device: RHI.Device;
     window: *Window;
@@ -51,8 +50,8 @@ shutdown :: () {
 }
 
 do_render :: () {
-    // allocate command buffer from command pool
-    RHI.command_pool_alloc_buf();
+    using renderer;
+    cmd_buf := RHI.command_pool_alloc_buf(*gfx_cmd_pools[curr_frame_in_flight_idx], *device);
 }
 
 #scope_file
