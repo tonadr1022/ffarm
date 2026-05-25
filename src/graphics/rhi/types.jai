@@ -1,6 +1,7 @@
 DeviceSettings :: struct {
     validation_layers_enabled: bool;
     exit_on_validation_layer_error: bool;
+    frames_in_flight: u32; // 2 or 3
 }
 
 SurfaceT :: struct {
@@ -21,4 +22,9 @@ CommandPool :: struct {
 
 Swapchain :: struct {
     using specific: SwapchainBackend;
+}
+
+QueueFamily :: enum_flags u32 {
+    GRAPHICS :: 0;
+    COMPUTE :: 1;
 }

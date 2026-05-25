@@ -9,7 +9,14 @@ get_vulkan_instance_extensions :: () -> []*u8 {
     return result;
 }
 
-#scope_export
+#scope_module
+
+device_get_queue_family_index :: (using device: *Device, queue_family: QueueFamily) -> u32 {
+    if queue_family == {
+        case .GRAPHICS; return queue_family_indices.graphics_queue_family_idx;
+        case .COMPUTE; return queue_family_indices.compute_queue_family_idx;
+    }
+}
 
 DeviceBackend :: struct {
     instance: VkInstance;
@@ -18,6 +25,13 @@ DeviceBackend :: struct {
     debug_messenger: VkDebugUtilsMessengerEXT;
     graphics_queue: CommandQueueBackend;
     debug_callback_data: DebugCallbackData;
+    settings: DeviceSettings;
+    queue_family_indices: QueueFamilyIndices;
+}
+
+QueueFamilyIndices :: struct {
+    graphics_queue_family_idx: u32;
+    compute_queue_family_idx: u32;
 }
 
 CommandQueueBackend :: struct {
@@ -30,11 +44,14 @@ CommandPoolBackend :: struct {
     queue_family_index: u32;
 }
 
+#scope_export
+
 DebugCallbackData :: struct {
     exit_on_error: bool;
 }
 
 device_init :: (backend: *Device, settings: *DeviceSettings) {
+    backend.settings = settings;
     enabled_layers: [..]*u8;
     defer array_free(enabled_layers);
     enabled_extensions: [..]*u8;

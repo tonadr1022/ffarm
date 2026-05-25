@@ -1,13 +1,14 @@
 #import "graphics/rhi";
 #import "Basic";
-#load "src/platform/platform.jai";
-#load "src/graphics/renderer/renderer.jai";
+#import "platform";
+#import "jai-sdl3";
+REN :: #import "graphics/renderer";
 
 main :: () {
     platform_init();
     window: Window;
     window_init(*window, "window", 800, 800);
-    renderer_init(*window);
+    REN.init(*window);
 
     should_quit := false;
 
@@ -25,7 +26,7 @@ main :: () {
         }
     }
 
-    renderer_shutdown();
+    REN.shutdown();
 
     print("hello world!\n");
 }

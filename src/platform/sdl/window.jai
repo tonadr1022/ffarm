@@ -18,3 +18,5 @@ window_get_size :: (window: *Window) -> s32, s32 {
     SDL_GetWindowSizeInPixels(window.sdl_window, *w, *h);
     return w, h;
 }
+
+#import "graphics/rhi";

@@ -5,4 +5,7 @@
     #assert false, "Unsupported platform";
 }
 
+#scope_export
+
+#import("jai-sdl3");
 #load "types.jai";
