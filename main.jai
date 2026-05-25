@@ -1,3 +1,4 @@
+#import "graphics/rhi";
 #import "Basic";
 #load "src/platform/platform.jai";
 #load "src/graphics/renderer/renderer.jai";

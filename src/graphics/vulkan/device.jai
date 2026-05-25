@@ -1,9 +1,15 @@
-VK_CHECK :: (result: VkResult) {
-    if result != VkResult.SUCCESS {
-        print("Vulkan error: %", result);
-        exit(1);
-    }
+#scope_file
+
+get_vulkan_instance_extensions :: () -> []*u8 {
+    result: []*u8;
+    count: u32;
+    extensions := SDL_Vulkan_GetInstanceExtensions(*count);
+    result.data = extensions;
+    result.count = count;
+    return result;
 }
+
+#scope_export
 
 DeviceBackend :: struct {
     instance: VkInstance;
@@ -13,7 +19,6 @@ DeviceBackend :: struct {
     graphics_queue: CommandQueue;
     debug_callback_data: DebugCallbackData;
 }
-
 
 CommandQueue :: struct {
     queue: VkQueue;
@@ -40,7 +45,7 @@ device_init :: (backend: *RHIDevice, settings: *RHIDeviceSettings) {
         array_add(*enabled_extensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-    platform_extensions := platform_get_vulkan_instance_extensions();
+    platform_extensions := get_vulkan_instance_extensions();
     for extension : platform_extensions {
         array_add(*enabled_extensions, extension);
     }
@@ -168,9 +173,3 @@ device_free :: (backend: *RHIDevice) {
 
     vkDestroyInstance(backend.instance, null);
 }
-
-device_get_vk_device :: (backend: *RHIDevice) -> VkDevice {
-    return backend.device;
-}
-
-#import "Vulkan";

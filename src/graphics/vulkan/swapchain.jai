@@ -5,6 +5,20 @@ SwapchainBackend :: struct {
     device: VkDevice;
 }
 
+swapchain_init :: (swapchain: *RHISwapchain, device: *RHIDevice, surface: RHISurface, width: s32, height: s32, vsync: bool) {
+    swapchain.device = device.device;
+    vk_swapchain := create_swapchain(device, surface, width, height, vsync, VK_NULL_HANDLE);
+    swapchain.swapchain = vk_swapchain;
+}
+
+swapchain_destroy :: (swapchain: *RHISwapchain) {
+    vkDestroySwapchainKHR(swapchain.device, swapchain.swapchain, null);
+}
+
+// todo: handle swapchain resizing
+
+#scope_file
+
 is_srgb_format :: (format: VkFormat) -> bool {
     // TODO: compressed formats
     return format == VkFormat.B8G8R8A8_SRGB
@@ -16,30 +30,18 @@ is_srgb_format :: (format: VkFormat) -> bool {
         || format == VkFormat.A8B8G8R8_SRGB_PACK32;
 }
 
-swapchain_init :: (swapchain: *RHISwapchain, device: *RHIDevice, window: *Window, vsync: bool) {
-    swapchain.device = device_get_vk_device(device);
-    vk_swapchain := create_swapchain(device, window, vsync, VK_NULL_HANDLE);
-    swapchain.swapchain = vk_swapchain;
-}
+create_swapchain :: (device: *RHIDevice, surface: RHISurface, width: s32, height: s32, vsync: bool, old_swapchain: VkSwapchainKHR) -> VkSwapchainKHR {
+    vk_surface := cast(VkSurfaceKHR) surface._handle;
 
-swapchain_destroy :: (swapchain: *RHISwapchain) {
-    vkDestroySwapchainKHR(swapchain.device.device, swapchain.swapchain, null);
-}
-
-// todo: handle swapchain resizing
-
-#scope_file
-
-create_swapchain :: (device: *RHIDevice, window: *Window, vsync: bool, old_swapchain: VkSwapchainKHR) -> VkSwapchainKHR {
     surface_capabilities: VkSurfaceCapabilitiesKHR;
-    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physical_device, window.surface, *surface_capabilities));
+    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physical_device, vk_surface, *surface_capabilities));
 
     surface_formats: [..]VkSurfaceFormatKHR;
     defer array_free(surface_formats);
     surface_formats_count: u32;
-    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device.physical_device, window.surface, *surface_formats_count, null));
+    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device.physical_device, vk_surface, *surface_formats_count, null));
     array_resize(*surface_formats, surface_formats_count);
-    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device.physical_device, window.surface, *surface_formats_count, surface_formats.data));
+    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device.physical_device, vk_surface, *surface_formats_count, surface_formats.data));
 
     selected_surface_format := -1;
     for format, idx : surface_formats {
@@ -55,8 +57,8 @@ create_swapchain :: (device: *RHIDevice, window: *Window, vsync: bool, old_swapc
     // select present mode
     present_modes: [16]VkPresentModeKHR;
     present_modes_count: u32;
-    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device.physical_device, window.surface, *present_modes_count, null));
-    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device.physical_device, window.surface, *present_modes_count, present_modes.data));
+    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device.physical_device, vk_surface, *present_modes_count, null));
+    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device.physical_device, vk_surface, *present_modes_count, present_modes.data));
 
     selected_present_mode: VkPresentModeKHR;
     if vsync {
@@ -71,15 +73,13 @@ create_swapchain :: (device: *RHIDevice, window: *Window, vsync: bool, old_swapc
         }
     }
 
-    w, h := window_get_size(window);
-
     create_info: VkSwapchainCreateInfoKHR = {
         flags = 0,
-        surface = window.surface,
+        surface = vk_surface,
         minImageCount = surface_capabilities.minImageCount,
         imageFormat = surface_formats[selected_surface_format].format,
         imageColorSpace = surface_formats[selected_surface_format].colorSpace,
-        imageExtent = .{xx w, xx h},
+        imageExtent = .{xx width, xx height},
         imageArrayLayers = 1,
         imageUsage = VkImageUsageFlags.COLOR_ATTACHMENT_BIT | VkImageUsageFlags.TRANSFER_DST_BIT,
         preTransform = VkSurfaceTransformFlagBitsKHR.IDENTITY_BIT_KHR,
@@ -96,5 +96,3 @@ create_swapchain :: (device: *RHIDevice, window: *Window, vsync: bool, old_swapc
     }
     return new_vk_swapchain;
 }
-
-#import "Vulkan";
