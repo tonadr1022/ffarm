@@ -55,6 +55,8 @@ DebugCallbackData :: struct {
 }
 
 device_init :: (backend: *Device, settings: *DeviceSettings) {
+    vk_load_global_functions(xx SDL_Vulkan_GetVkGetInstanceProcAddr());
+
     backend.settings = settings;
     enabled_layers: [..]*u8;
     defer array_free(enabled_layers);
@@ -82,6 +84,7 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
     create_info.ppEnabledExtensionNames = enabled_extensions.data;
 
     VK_CHECK(vkCreateInstance(*create_info, null, *backend.instance));
+    vk_load_instance_functions(backend.instance);
 
     physical_device_count: u32;
     VK_CHECK(vkEnumeratePhysicalDevices(backend.instance, *physical_device_count, null));
@@ -163,6 +166,7 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
         dev_create_info.ppEnabledExtensionNames = device_extensions.data;
         VK_CHECK(vkCreateDevice(backend.physical_device, *dev_create_info, null, *backend.device));
     }
+    vk_load_device_functions(backend.device);
 
     // just graphics queue for now
     queue_count: u32;

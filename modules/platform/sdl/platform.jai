@@ -6,4 +6,8 @@ platform_init :: () {
         print("Failed to init SDL: %\n", to_string(SDL_GetError()));
         exit(1);
     }
+    if !SDL_Vulkan_LoadLibrary(null) {
+        print("Failed to load Vulkan: %\n", to_string(SDL_GetError()));
+        exit(1);
+    }
 }
