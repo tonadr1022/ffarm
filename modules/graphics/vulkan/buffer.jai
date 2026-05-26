@@ -2,8 +2,8 @@ BufferBackend :: struct {
     vk_buffer: VkBuffer;
 }
 
-buffer_create :: () {
-    vmaCreateBuffer();
+buffer_init :: (buf: *Buffer, device: *Device) {
+//    vmaCreateBuffer()
 }
 
 #import "jai-vma";

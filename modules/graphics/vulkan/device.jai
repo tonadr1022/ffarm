@@ -1,53 +1,3 @@
-#scope_file
-
-get_vulkan_instance_extensions :: () -> []*u8 {
-    result: []*u8;
-    count: u32;
-    extensions := SDL_Vulkan_GetInstanceExtensions(*count);
-    result.data = extensions;
-    result.count = count;
-    return result;
-}
-
-#scope_module
-
-device_get_queue_family_index :: (using device: *Device, queue_family: QueueFamily) -> u32 {
-    if queue_family == {
-        case .GRAPHICS; return queue_family_indices.graphics_queue_family_idx;
-        case .COMPUTE; return queue_family_indices.compute_queue_family_idx;
-    }
-}
-
-DeviceBackend :: struct {
-    instance: VkInstance;
-    physical_device: VkPhysicalDevice;
-    device: VkDevice;
-    debug_messenger: VkDebugUtilsMessengerEXT;
-    graphics_queue: CommandQueueBackend;
-    debug_callback_data: DebugCallbackData;
-    settings: DeviceSettings;
-    queue_family_indices: QueueFamilyIndices;
-}
-
-QueueFamilyIndices :: struct {
-    graphics_queue_family_idx: u32;
-    compute_queue_family_idx: u32;
-}
-
-CommandQueueBackend :: struct {
-    queue: VkQueue;
-    queue_family_index: u32;
-}
-
-CommandPoolBackend :: struct {
-    pool: VkCommandPool;
-    queue_family_index: u32;
-}
-
-CommandBufferBackend :: struct {
-    vk_cmd_buffer: VkCommandBuffer;
-}
-
 #scope_export
 
 DebugCallbackData :: struct {
@@ -184,6 +134,14 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
         index += 1;
     }
     vkGetDeviceQueue(backend.device, backend.graphics_queue.queue_family_index, 0, *backend.graphics_queue.queue);
+
+    {
+        vma_cinfo: VmaAllocatorCreateInfo;
+        vma_cinfo.physicalDevice = backend.physical_device;
+        vma_cinfo.device = backend.device;
+        vma_cinfo.instance = backend.instance;
+        VK_CHECK(vmaCreateAllocator(*vma_cinfo, *backend.vma_allocator));
+    }
 }
 
 device_free :: (backend: *Device) {
@@ -198,3 +156,58 @@ device_free :: (backend: *Device) {
 
     vkDestroyInstance(backend.instance, null);
 }
+
+#scope_module
+
+device_get_queue_family_index :: (using device: *Device, queue_family: QueueFamily) -> u32 {
+    if queue_family == {
+        case .GRAPHICS; return queue_family_indices.graphics_queue_family_idx;
+        case .COMPUTE; return queue_family_indices.compute_queue_family_idx;
+    }
+}
+
+DeviceBackend :: struct {
+    instance: VkInstance;
+    physical_device: VkPhysicalDevice;
+    device: VkDevice;
+    debug_messenger: VkDebugUtilsMessengerEXT;
+    graphics_queue: CommandQueueBackend;
+    debug_callback_data: DebugCallbackData;
+    settings: DeviceSettings;
+    queue_family_indices: QueueFamilyIndices;
+    vma_allocator: VmaAllocator;
+}
+
+QueueFamilyIndices :: struct {
+    graphics_queue_family_idx: u32;
+    compute_queue_family_idx: u32;
+}
+
+CommandQueueBackend :: struct {
+    queue: VkQueue;
+    queue_family_index: u32;
+}
+
+CommandPoolBackend :: struct {
+    pool: VkCommandPool;
+    queue_family_index: u32;
+}
+
+CommandBufferBackend :: struct {
+    vk_cmd_buffer: VkCommandBuffer;
+}
+
+
+#scope_file
+
+get_vulkan_instance_extensions :: () -> []*u8 {
+    result: []*u8;
+    count: u32;
+    extensions := SDL_Vulkan_GetInstanceExtensions(*count);
+    result.data = extensions;
+    result.count = count;
+    return result;
+}
+
+#import "jai-vma";
+

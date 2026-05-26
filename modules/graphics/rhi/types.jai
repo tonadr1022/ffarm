@@ -28,6 +28,10 @@ Swapchain :: struct {
     using specific: SwapchainBackend;
 }
 
+Buffer :: struct {
+    using specific: BufferBackend;
+}
+
 QueueFamily :: enum_flags u32 {
     GRAPHICS :: 0;
     COMPUTE :: 1;

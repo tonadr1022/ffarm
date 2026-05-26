@@ -3,11 +3,13 @@ Renderer :: struct {
     window: *Window;
     swapchain: RHI.Swapchain;
 
+    // todo: compute cmd pools
     gfx_cmd_pools: [MAX_FRAMES_IN_FLIGHT]RHI.CommandPool;
     frames_in_flight: u32;
     curr_frame_in_flight_idx: u32;
     curr_frame_number: u64;
-    // todo: compute cmd pools
+
+    tri_buffer: RHI.Buffer;
 }
 
 renderer: Renderer;
@@ -34,6 +36,8 @@ init :: (window: *Window) {
     for 0..frames_in_flight-1 {
         RHI.command_pool_init(*gfx_cmd_pools[it], *device, RHI.QueueFamily.GRAPHICS);
     }
+
+    RHI.buffer_init(*tri_buffer, *device);
 
 }
 

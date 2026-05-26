@@ -1,0 +1,12 @@
+{
+    "local_modules": [
+        "modules",
+        "third_party"
+    ],
+    "roots": [
+        "main.jai"
+    ],
+    "build_root": "main.jai",
+    "jai_path": "/home/tony/personal/jai",
+    "intermediate_path": ".build"
+}

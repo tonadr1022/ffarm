@@ -39,13 +39,13 @@ compile_vma :: (os: Operating_System_Tag, cpu: CPU_Tag) -> bool {
         case .WINDOWS;
             make_directory_if_it_does_not_exist("windows");
             return build_cpp_dynamic_lib("windows/libvma", VMA_PATH,
-                extra = .["/I", VULKAN_PATHS.include, "/DVMA_IMPLEMENTATION", "/DVMA_CALL_PRE=__declspec(dllexport)", "/std:c++14"],
+                extra = .["/I", VULKAN_PATHS.include, "/DVMA_IMPLEMENTATION", "/DVMA_CALL_PRE=__declspec(dllexport)", "/std:c++23"],
                 library_files = .[VULKAN_PATHS.import_library]
             );
 
         case .LINUX;
             make_directory_if_it_does_not_exist("linux");
-            return build_cpp_dynamic_lib("linux/libvma", VMA_PATH, extra = .["-I", VULKAN_PATHS.include, "-DVMA_IMPLEMENTATION", "-x", "c++", "-std=c++14", "-lstdc++", "-lvulkan", "-fno-exceptions", "-fno-rtti"]);
+            return build_cpp_dynamic_lib("linux/libvma", VMA_PATH, extra = .["-I", VULKAN_PATHS.include, "-DVMA_IMPLEMENTATION", "-x", "c++", "-std=c++23", "-lstdc++", "-lvulkan", "-fno-exceptions", "-fno-rtti"]);
 
         case .ANDROID;
             make_directory_if_it_does_not_exist("android");
@@ -55,7 +55,7 @@ compile_vma :: (os: Operating_System_Tag, cpu: CPU_Tag) -> bool {
 
         case .MACOS;
             make_directory_if_it_does_not_exist("macos");
-            success := build_cpp_dynamic_lib("macos/libvma", VMA_PATH, extra = .["-I", VULKAN_PATHS.include, "-DVMA_IMPLEMENTATION", "-x", "c++", "-std=c++14", "-lc++", "-lvulkan.1", "-fno-exceptions", "-fno-rtti"]);
+            success := build_cpp_dynamic_lib("macos/libvma", VMA_PATH, extra = .["-I", VULKAN_PATHS.include, "-DVMA_IMPLEMENTATION", "-x", "c++", "-std=c++23", "-lc++", "-lvulkan.1", "-fno-exceptions", "-fno-rtti"]);
             if !success return false;
 
             // Update the Vulkan rpath to point to the system library location
