@@ -145,6 +145,7 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
 }
 
 device_free :: (backend: *Device) {
+    vmaDestroyAllocator(backend.vma_allocator);
     vkDestroyDevice(backend.device, null);
 
     if backend.debug_messenger {
@@ -210,4 +211,5 @@ get_vulkan_instance_extensions :: () -> []*u8 {
 }
 
 #import "jai-vma";
+#import "graphics/rhi";
 

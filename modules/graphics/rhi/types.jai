@@ -28,6 +28,16 @@ Swapchain :: struct {
     using specific: SwapchainBackend;
 }
 
+BufferCreateFlags :: enum_flags u32 {
+    None :: 0;
+    HostVisible :: 1;
+};
+
+BufferDesc :: struct {
+    size: u32;
+    flags: BufferCreateFlags;
+}
+
 Buffer :: struct {
     using specific: BufferBackend;
 }

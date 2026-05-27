@@ -37,12 +37,13 @@ init :: (window: *Window) {
         RHI.command_pool_init(*gfx_cmd_pools[it], *device, RHI.QueueFamily.GRAPHICS);
     }
 
-    RHI.buffer_init(*tri_buffer, *device);
+    RHI.buffer_create(*tri_buffer, *(RHI.BufferDesc.{size=24}), *device);
 
 }
 
 shutdown :: () { 
     using renderer;
+    RHI.buffer_destroy(*tri_buffer, *device);
     curr_frame_number = 0;
     curr_frame_in_flight_idx = 0;
     for 0..frames_in_flight-1 {
