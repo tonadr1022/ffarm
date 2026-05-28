@@ -1,10 +1,10 @@
 BufferBackend :: struct {
     vk_buffer: VkBuffer;
-    allocation: VmaAllocation;
+    vma_allocation: VmaAllocation;
     desc: BufferDesc;
 }
 
-buffer_create :: (buf: *Buffer, desc: *BufferDesc, device: *Device) {
+buffer_init :: (buf: *Buffer, desc: *BufferDesc, device: *Device) {
     alloc_info: VmaAllocationCreateInfo;
     if desc.flags & BufferCreateFlags.HostVisible {
         alloc_info.flags = xx VmaAllocationCreateFlagBits.HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
@@ -14,11 +14,11 @@ buffer_create :: (buf: *Buffer, desc: *BufferDesc, device: *Device) {
         size = desc.size,
         usage = VkBufferUsageFlags.TRANSFER_DST | VkBufferUsageFlags.TRANSFER_SRC,
     };
-    vmaCreateBuffer(device.vma_allocator, *buffer_cinfo, *alloc_info, *buf.vk_buffer, *buf.allocation, null);
+    VK_CHECK(vmaCreateBuffer(device.vma_allocator, *buffer_cinfo, *alloc_info, *buf.vk_buffer, *buf.vma_allocation, null));
 }
 
 buffer_destroy :: (buf: *Buffer, device: *Device) {
-    vmaDestroyBuffer(device.vma_allocator, buf.vk_buffer, buf.allocation);
+    vmaDestroyBuffer(device.vma_allocator, buf.vk_buffer, buf.vma_allocation);
 }
 
 #scope_file
