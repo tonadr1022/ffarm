@@ -10,6 +10,19 @@ convert :: (using extent3D: Extent3D) -> VkExtent3D {
     return .{width=width, height=height, depth=depth};
 }
 
+convert :: (stage: PipelineStage) -> VkPipelineStageFlags {
+    result: VkPipelineStageFlags = 0;
+    if stage & PipelineStage.TOP_OF_PIPE             result |= VkPipelineStageFlags.TOP_OF_PIPE;
+    if stage & PipelineStage.VERTEX_SHADER           result |= VkPipelineStageFlags.VERTEX_SHADER;
+    if stage & PipelineStage.FRAGMENT_SHADER         result |= VkPipelineStageFlags.FRAGMENT_SHADER;
+    if stage & PipelineStage.COMPUTE_SHADER          result |= VkPipelineStageFlags.COMPUTE_SHADER;
+    if stage & PipelineStage.COLOR_ATTACHMENT_OUTPUT result |= VkPipelineStageFlags.COLOR_ATTACHMENT_OUTPUT;
+    if stage & PipelineStage.TRANSFER                result |= VkPipelineStageFlags.TRANSFER;
+    if stage & PipelineStage.BOTTOM_OF_PIPE          result |= VkPipelineStageFlags.BOTTOM_OF_PIPE;
+    if stage & PipelineStage.ALL_COMMANDS            result |= VkPipelineStageFlags.ALL_COMMANDS;
+    return result;
+}
+
 convert :: (format: TextureFormat) -> VkFormat {
     if format == {
         case TextureFormat.UNDEFINED; return VkFormat.UNDEFINED;

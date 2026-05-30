@@ -95,12 +95,15 @@ do_render :: () {
     cmd_buf := RHI.command_pool_alloc_buf(*gfx_cmd_pools[curr_frame_in_flight_idx], *device);
     RHI.cmd_begin(*cmd_buf, *device);
 
+    acquire_wait_stage := RHI.PipelineStage.COLOR_ATTACHMENT_OUTPUT;
+
     before_state := frame.texture.current_state;
     if before_state != .COLOR_RENDER_TARGET {
         barrier_desc := RHI.TextureBarrierDesc.{
             texture=frame.texture,
             before=before_state,
             after=.COLOR_RENDER_TARGET,
+            src_stage=acquire_wait_stage,
         };
         RHI.texture_barrier(*cmd_buf, *barrier_desc);
     }
@@ -118,6 +121,14 @@ do_render :: () {
     RHI.begin_render_pass(*cmd_buf, *pass_desc);
     RHI.end_render_pass(*cmd_buf);
 
+/*
+    pass_desc.color_attachments[0].clear_color.y = 1.0;
+    pass_desc.render_area.extent.width /= 2;
+    pass_desc.render_area.extent.height /= 2;
+    RHI.begin_render_pass(*cmd_buf, *pass_desc);
+    RHI.end_render_pass(*cmd_buf);
+    */
+
     present_barrier := RHI.TextureBarrierDesc.{
         texture=frame.texture,
         before=.COLOR_RENDER_TARGET,
@@ -127,13 +138,11 @@ do_render :: () {
 
     RHI.cmd_end(*cmd_buf);
 
-    wait_sems := *sync.acquire_sem;
-    signal_sems := *sync.render_complete_sem;
     cmd_bufs := *cmd_buf;
     submit_desc := RHI.QueueSubmitDesc.{
         cmd_buffers=.[cmd_bufs],
-        wait_semaphores=.[wait_sems],
-        signal_semaphores=.[signal_sems],
+        waits=.[.{semaphore=*sync.acquire_sem, stage=acquire_wait_stage}],
+        signal_semaphores=.[*sync.render_complete_sem],
         fence=*sync.in_flight_fence,
     };
     RHI.queue_submit(*device, *submit_desc);

@@ -17,6 +17,8 @@ texture_barriers :: (cmd_buf: *CommandBuffer, descs: []TextureBarrierDesc) {
         src_access, dst_access := transition_access(desc.before, desc.after);
         src_stage := state_stage(desc.before);
         dst_stage := state_stage(desc.after);
+        if desc.src_stage src_stage = convert(desc.src_stage);
+        if desc.dst_stage dst_stage = convert(desc.dst_stage);
 
         src_stages |= src_stage;
         dst_stages |= dst_stage;

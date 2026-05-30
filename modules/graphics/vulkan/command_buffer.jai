@@ -43,9 +43,10 @@ end_render_pass :: (cmd_buf: *CommandBuffer) {
 queue_submit :: (device: *Device, desc: *QueueSubmitDesc) {
     wait_sems: [8]VkSemaphore;
     wait_stages: [8]VkPipelineStageFlags;
-    for i : 0..desc.wait_semaphores.count-1 {
-        wait_sems[i] = desc.wait_semaphores[i].semaphore;
-        wait_stages[i] = VkPipelineStageFlags.COLOR_ATTACHMENT_OUTPUT;
+    assert(desc.waits.count <= wait_sems.count);
+    for i : 0..desc.waits.count-1 {
+        wait_sems[i] = desc.waits[i].semaphore.semaphore;
+        wait_stages[i] = convert(desc.waits[i].stage);
     }
 
     signal_sems: [8]VkSemaphore;
@@ -59,7 +60,7 @@ queue_submit :: (device: *Device, desc: *QueueSubmitDesc) {
     }
 
     submit_info := VkSubmitInfo.{
-        waitSemaphoreCount = xx desc.wait_semaphores.count,
+        waitSemaphoreCount = xx desc.waits.count,
         pWaitSemaphores = wait_sems.data,
         pWaitDstStageMask = wait_stages.data,
         commandBufferCount = xx desc.cmd_buffers.count,

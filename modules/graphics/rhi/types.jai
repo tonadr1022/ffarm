@@ -458,6 +458,8 @@ TextureBarrierDesc :: struct {
     texture: *Texture;
     before: TextureState;
     after: TextureState;
+    src_stage: PipelineStage = 0; // 0 = derive from before state
+    dst_stage: PipelineStage = 0; // 0 = derive from after state
 }
 
 BufferBarrierDesc :: struct {
@@ -475,6 +477,22 @@ Texture :: struct {
 QueueFamily :: enum_flags u32 {
     GRAPHICS :: 0;
     COMPUTE :: 1;
+}
+
+PipelineStage :: enum_flags u32 {
+    TOP_OF_PIPE;
+    VERTEX_SHADER;
+    FRAGMENT_SHADER;
+    COMPUTE_SHADER;
+    COLOR_ATTACHMENT_OUTPUT;
+    TRANSFER;
+    BOTTOM_OF_PIPE;
+    ALL_COMMANDS;
+}
+
+SubmitWait :: struct {
+    semaphore: *Semaphore;
+    stage: PipelineStage;
 }
 
 Offset2D :: struct {
@@ -526,7 +544,7 @@ RenderPassDesc :: struct {
 
 QueueSubmitDesc :: struct {
     cmd_buffers: []*CommandBuffer;
-    wait_semaphores: []*Semaphore;
+    waits: []SubmitWait;
     signal_semaphores: []*Semaphore;
     fence: *Fence;
 }
