@@ -10,6 +10,9 @@ TextureViewBackend :: struct {
 
 texture_init :: (tex: *Texture, desc: *TextureDesc, device: *Device) {
     assert(desc.size.width > 0 && desc.size.height > 0 && desc.size.depth > 0);
+    tex.desc = desc.*;
+    tex.current_state = .UNDEFINED;
+    tex.is_external = false;
     cinfo := VkImageCreateInfo.{
         imageType = image_type_from_size(desc.size),
         format = convert(desc.format),
@@ -32,17 +35,20 @@ texture_init_external :: (tex: *Texture, vk_image: VkImage, desc: *TextureDesc) 
     tex.is_external = true;
     tex.vk_image = vk_image;
     tex.desc = desc.*;
+    tex.current_state = .UNDEFINED;
 }
 
 texture_destroy :: (tex: *Texture, device: *Device) {
+    if tex.is_external return;
     vmaDestroyImage(device.vma_allocator, tex.vk_image, tex.vma_allocation);
 }
 
 texture_view_init :: (tex_view: *TextureView, desc: *TextureViewDesc, device: *Device) {
+    tex_view.desc = desc.*;
     cinfo := VkImageViewCreateInfo.{
         image = desc.texture.vk_image,
         viewType = VkImageViewType.e2D,
-        format = VkFormat.R32_SFLOAT,
+        format = convert(desc.texture.desc.format),
         subresourceRange = VkImageSubresourceRange.{
             aspectMask = VkImageAspectFlags.COLOR,
             levelCount = 1,

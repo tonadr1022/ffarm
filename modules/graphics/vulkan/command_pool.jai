@@ -5,6 +5,10 @@ command_pool_init :: (pool: *CommandPool, device: *Device, queue: QueueFamily) {
     VK_CHECK(vkCreateCommandPool(device.device, *create_info, null, *pool.pool));
 }
 
+command_pool_reset :: (pool: *CommandPool, device: *Device) {
+    VK_CHECK(vkResetCommandPool(device.device, pool.pool, 0));
+}
+
 command_pool_destroy :: (pool: *CommandPool, device: *Device) {
     vkDestroyCommandPool(device.device, pool.pool, null);
 }

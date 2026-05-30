@@ -1,3 +1,7 @@
+convert_vk_format :: (format: VkFormat) -> TextureFormat {
+    return cast(TextureFormat) xx format;
+}
+
 convert :: (using rect2D: Rect2D) -> VkRect2D {
     return .{offset=.{offset.x, offset.y}, extent=.{extent.width, extent.height}};
 }

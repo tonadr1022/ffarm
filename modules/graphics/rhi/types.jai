@@ -26,6 +26,23 @@ CommandBuffer :: struct {
 
 Swapchain :: struct {
     using specific: SwapchainBackend;
+    format: TextureFormat;
+    extent: Extent2D;
+    image_count: u32;
+}
+
+SwapchainFrame :: struct {
+    image_index: u32;
+    texture: *Texture;
+    view: *TextureView;
+}
+
+Semaphore :: struct {
+    using specific: SemaphoreBackend;
+}
+
+Fence :: struct {
+    using specific: FenceBackend;
 }
 
 BufferCreateFlags :: enum_flags u32 {
@@ -425,9 +442,34 @@ TextureDesc :: struct {
     array_layers: u32 = 1;
 }
 
+TextureState :: enum {
+    UNDEFINED;
+    PRESENT;
+    COLOR_RENDER_TARGET;
+    DEPTH_STENCIL_WRITE;
+    DEPTH_STENCIL_READ;
+    SHADER_READ;
+    SHADER_WRITE;
+    COPY_SRC;
+    COPY_DST;
+}
+
+TextureBarrierDesc :: struct {
+    texture: *Texture;
+    before: TextureState;
+    after: TextureState;
+}
+
+BufferBarrierDesc :: struct {
+    buffer: *Buffer;
+    before: TextureState;
+    after: TextureState;
+}
+
 Texture :: struct {
     using specific: TextureBackend;
     desc: TextureDesc; // immutable after creation
+    current_state: TextureState;
 }
 
 QueueFamily :: enum_flags u32 {
@@ -456,15 +498,37 @@ Rect2D :: struct {
     extent: Extent2D;
 }
 
+LoadOp :: enum {
+    LOAD;
+    CLEAR;
+    DONT_CARE;
+}
+
+StoreOp :: enum {
+    STORE;
+    DONT_CARE;
+}
+
 RenderPassDesc :: struct {
     AttachmentDesc :: struct {
+        view: *TextureView;
+        load_op: LoadOp = .CLEAR;
+        store_op: StoreOp = .STORE;
         clear_color: Vector4;
     };
 
     max_color_attachments :: 8;
+    color_attachment_count: u32;
     color_attachments: [max_color_attachments]AttachmentDesc;
 
     render_area: Rect2D;
+}
+
+QueueSubmitDesc :: struct {
+    cmd_buffers: []*CommandBuffer;
+    wait_semaphores: []*Semaphore;
+    signal_semaphores: []*Semaphore;
+    fence: *Fence;
 }
 
 #import "Math";

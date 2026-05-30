@@ -19,6 +19,8 @@
     #load "../vulkan/device.jai";
     #load "../vulkan/surface.jai";
     #load "../vulkan/swapchain.jai";
+    #load "../vulkan/sync.jai";
+    #load "../vulkan/barrier.jai";
     #load "../vulkan/command_pool.jai";
     #load "../vulkan/command_buffer.jai";
     #load "../vulkan/buffer.jai";

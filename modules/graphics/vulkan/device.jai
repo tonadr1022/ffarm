@@ -22,9 +22,10 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
     for extension : platform_extensions {
         array_add(*enabled_extensions, extension);
     }
+    array_add(*enabled_extensions, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     app_info: VkApplicationInfo;
-    app_info.apiVersion = VK_API_VERSION_1_0;
+    app_info.apiVersion = VK_API_VERSION_1_4;
 
     create_info: VkInstanceCreateInfo;
     create_info.pApplicationInfo = *app_info;
@@ -100,9 +101,29 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
     defer array_free(device_extensions);
     array_add(*device_extensions, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
+    queue_count: u32;
+    vkGetPhysicalDeviceQueueFamilyProperties(selected_phys_dev, *queue_count, null);
+    queue_family_properties: []VkQueueFamilyProperties;
+    array_resize(*queue_family_properties, queue_count);
+    defer array_free(queue_family_properties);
+    vkGetPhysicalDeviceQueueFamilyProperties(selected_phys_dev, *queue_count, queue_family_properties.data);
+
+    graphics_queue_family_idx: u32 = 0;
+    for * queue_family_property, index : queue_family_properties {
+        if queue_family_property.queueFlags & VkQueueFlags.GRAPHICS {
+            graphics_queue_family_idx = xx index;
+            break;
+        }
+    }
+    backend.queue_family_indices.graphics_queue_family_idx = graphics_queue_family_idx;
+    backend.graphics_queue.queue_family_index = graphics_queue_family_idx;
+
+    vulkan13_features: VkPhysicalDeviceVulkan13Features;
+    vulkan13_features.dynamicRendering = VK_TRUE;
+
     {
         queue_create_info: VkDeviceQueueCreateInfo;
-        queue_create_info.queueFamilyIndex = 0;
+        queue_create_info.queueFamilyIndex = graphics_queue_family_idx;
         queue_create_info.queueCount = 1;
 
         queue_priorities: [1]float = .[1.0];
@@ -110,6 +131,7 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
 
         queue_create_infos: [1]VkDeviceQueueCreateInfo = .[queue_create_info];
         dev_create_info: VkDeviceCreateInfo;
+        dev_create_info.pNext = *vulkan13_features;
         dev_create_info.queueCreateInfoCount = queue_create_infos.count;
         dev_create_info.pQueueCreateInfos = queue_create_infos.data;
         dev_create_info.enabledExtensionCount = xx device_extensions.count;
@@ -118,22 +140,7 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
     }
     vk_load_device_functions(backend.device);
 
-    // just graphics queue for now
-    queue_count: u32;
-    vkGetPhysicalDeviceQueueFamilyProperties(backend.physical_device, *queue_count, null);
-    queue_family_properties: []VkQueueFamilyProperties;
-    array_resize(*queue_family_properties, queue_count);
-    defer array_free(queue_family_properties);
-    vkGetPhysicalDeviceQueueFamilyProperties(backend.physical_device, *queue_count, queue_family_properties.data);
-    index := 0;
-    for queue_family_property : queue_family_properties {
-        if queue_family_property.queueFlags & VkQueueFlags.GRAPHICS {
-            backend.graphics_queue.queue_family_index = xx index;
-            break;
-        }
-        index += 1;
-    }
-    vkGetDeviceQueue(backend.device, backend.graphics_queue.queue_family_index, 0, *backend.graphics_queue.queue);
+    vkGetDeviceQueue(backend.device, graphics_queue_family_idx, 0, *backend.graphics_queue.queue);
 
     {
         vma_cinfo: VmaAllocatorCreateInfo;
@@ -142,6 +149,10 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
         vma_cinfo.instance = backend.instance;
         VK_CHECK(vmaCreateAllocator(*vma_cinfo, *backend.vma_allocator));
     }
+}
+
+device_wait_idle :: (backend: *Device) {
+    VK_CHECK(vkDeviceWaitIdle(backend.device));
 }
 
 device_free :: (backend: *Device) {
