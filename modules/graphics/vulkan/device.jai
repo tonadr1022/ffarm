@@ -120,6 +120,9 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
 
     vulkan13_features: VkPhysicalDeviceVulkan13Features;
     vulkan13_features.dynamicRendering = VK_TRUE;
+    vulkan12_features: VkPhysicalDeviceVulkan12Features;
+    vulkan12_features.scalarBlockLayout = VK_TRUE;
+    vulkan13_features.pNext = *vulkan12_features;
 
     {
         queue_create_info: VkDeviceQueueCreateInfo;
@@ -149,6 +152,8 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
         vma_cinfo.instance = backend.instance;
         VK_CHECK(vmaCreateAllocator(*vma_cinfo, *backend.vma_allocator));
     }
+
+    init_static_samplers(backend);
 }
 
 device_wait_idle :: (backend: *Device) {
@@ -156,6 +161,11 @@ device_wait_idle :: (backend: *Device) {
 }
 
 device_free :: (backend: *Device) {
+    for sampler : backend.static_samplers {
+        vkDestroySampler(backend.device, sampler, null);
+    }
+    array_free(backend.static_samplers);
+
     vmaDestroyAllocator(backend.vma_allocator);
     vkDestroyDevice(backend.device, null);
 
@@ -188,6 +198,7 @@ DeviceBackend :: struct {
     settings: DeviceSettings;
     queue_family_indices: QueueFamilyIndices;
     vma_allocator: VmaAllocator;
+    static_samplers: [..]VkSampler;
 }
 
 QueueFamilyIndices :: struct {
@@ -202,10 +213,40 @@ CommandQueueBackend :: struct {
 
 CommandBufferBackend :: struct {
     vk_cmd_buffer: VkCommandBuffer;
+    binder: DescriptorWrites;
+}
+
+BindPoolBackend :: struct {
+    pool: VkDescriptorPool;
+    pool_size: u32 = 256;
+}
+
+PipelineBackend :: struct {
+    vk_pipeline: VkPipeline;
+    pipeline_layout: VkPipelineLayout;
+    descriptor_set_layout: VkDescriptorSetLayout;
+    layout_bindings: [..]VkDescriptorSetLayoutBinding;
+    bindless_usages: [..]BindlessBindingUsage;
+    is_compute: bool;
 }
 
 
 #scope_file
+
+init_static_samplers :: (backend: *Device) {
+    // s100 in ROOT_SIGNATURE: linear clamp
+    sampler_info := VkSamplerCreateInfo.{
+        magFilter = VkFilter.LINEAR,
+        minFilter = VkFilter.LINEAR,
+        mipmapMode = VkSamplerMipmapMode.LINEAR,
+        addressModeU = VkSamplerAddressMode.CLAMP_TO_EDGE,
+        addressModeV = VkSamplerAddressMode.CLAMP_TO_EDGE,
+        addressModeW = VkSamplerAddressMode.CLAMP_TO_EDGE,
+    };
+    sampler: VkSampler;
+    VK_CHECK(vkCreateSampler(backend.device, *sampler_info, null, *sampler));
+    array_add(*backend.static_samplers, sampler);
+}
 
 get_vulkan_instance_extensions :: () -> []*u8 {
     result: []*u8;
@@ -218,4 +259,4 @@ get_vulkan_instance_extensions :: () -> []*u8 {
 
 #import "jai-vma";
 #import "graphics/rhi";
-
+#import "Vulkan";

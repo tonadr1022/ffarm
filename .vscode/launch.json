@@ -3,10 +3,11 @@
   "configurations": [
     {
       "name": "Build and Run",
-      "type": "node",
+      "type": "lldb",
       "request": "launch",
       "preLaunchTask": "build",
-      "runtimeExecutable": "${workspaceFolder}/build/main",
+      //      "runtimeExecutable": "${workspaceFolder}/build/main",
+      "program": "${workspaceFolder}/build/main",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
     }

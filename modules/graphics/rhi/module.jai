@@ -11,6 +11,7 @@
 #import "jai-sdl3";
 
 #load "types.jai";
+#load "descriptors.jai";
 
 #if backend == .VULKAN {
     #import "Vulkan";
@@ -23,6 +24,10 @@
     #load "../vulkan/barrier.jai";
     #load "../vulkan/command_pool.jai";
     #load "../vulkan/command_buffer.jai";
+    #load "../vulkan/descriptors.jai";
+    #load "../vulkan/bind.jai";
+    #load "../vulkan/shader_reflect.jai";
+    #load "../vulkan/pipeline.jai";
     #load "../vulkan/buffer.jai";
     #load "../vulkan/texture.jai";
 } else {

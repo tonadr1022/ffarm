@@ -2,6 +2,7 @@ TextureBackend :: struct {
     vk_image: VkImage;
     vma_allocation: VmaAllocation;
     is_external: bool;
+    bindless_index: u32 = k_invalid_bindless_index;
 }
 
 TextureViewBackend :: struct {
@@ -14,7 +15,7 @@ texture_init :: (tex: *Texture, desc: *TextureDesc, device: *Device) {
     tex.current_state = .UNDEFINED;
     tex.is_external = false;
     cinfo := VkImageCreateInfo.{
-        imageType = image_type_from_size(desc.size),
+        imageType = image_type_from_dimension(desc.dimension),
         format = convert(desc.format),
         extent = convert(desc.size),
         mipLevels = desc.mip_levels,
@@ -65,14 +66,12 @@ texture_view_destroy :: (tex_view: *TextureView, device: *Device) {
 #scope_file
 
 
-image_type_from_size :: (size: Extent3D) -> VkImageType {
-    if size.depth > 1
+image_type_from_dimension :: (dimension: TextureDimension) -> VkImageType {
+    if dimension == .D3
         return VkImageType.e3D;
-    if size.height > 1
+    if dimension == .D2
         return VkImageType.e2D;
-    else
-        return VkImageType.e1D;
-
+    return VkImageType.e1D;
 }
 
 convert :: (usage: TextureUsageFlags) -> VkImageUsageFlags {

@@ -2,6 +2,7 @@ BufferBackend :: struct {
     vk_buffer: VkBuffer;
     vma_allocation: VmaAllocation;
     desc: BufferDesc;
+    bindless_index: u32 = k_invalid_bindless_index;
 }
 
 buffer_init :: (buf: *Buffer, desc: *BufferDesc, device: *Device) {
@@ -14,11 +15,19 @@ buffer_init :: (buf: *Buffer, desc: *BufferDesc, device: *Device) {
                             | VmaAllocationCreateFlagBits.MAPPED_BIT;
     }
 
+    vk_usage: VkBufferUsageFlags = 0;
+    if desc.usage & BufferUsageFlags.TransferDst vk_usage |= VkBufferUsageFlags.TRANSFER_DST;
+    if desc.usage & BufferUsageFlags.TransferSrc vk_usage |= VkBufferUsageFlags.TRANSFER_SRC;
+    if desc.usage & BufferUsageFlags.Uniform vk_usage |= VkBufferUsageFlags.UNIFORM_BUFFER;
+    if desc.usage & BufferUsageFlags.Storage vk_usage |= VkBufferUsageFlags.STORAGE_BUFFER;
+    if desc.usage & BufferUsageFlags.Vertex vk_usage |= VkBufferUsageFlags.VERTEX_BUFFER;
+
     buffer_cinfo := VkBufferCreateInfo.{
         size = desc.size,
-        usage = VkBufferUsageFlags.TRANSFER_DST | VkBufferUsageFlags.TRANSFER_SRC,
+        usage = vk_usage,
     };
     VK_CHECK(vmaCreateBuffer(device.vma_allocator, *buffer_cinfo, *alloc_info, *buf.vk_buffer, *buf.vma_allocation, null));
+    buf.desc = desc.*;
 
     if desc.flags & BufferCreateFlags.HostVisible {
         allocation_info: VmaAllocationInfo;

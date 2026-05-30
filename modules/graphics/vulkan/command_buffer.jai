@@ -96,15 +96,43 @@ copy_buffer_to_buffer :: (cmd_buf: *CommandBuffer, src_buf: *Buffer, dst_buf: *B
 }
 
 /*
-upload_to_gpu_buffer :: (buf: *Buffer, device: Device, data: *$T, size: u32, src_offset: u32 = 0, dst_offset: u32 = 0) {
-    copy: VkCopyBufferInfo2.{
-        srcOffset = src_offset,
-        dstOffset = dst_offset,
-        size = size,
-    };
-    vkCmdCopyBuffer2();
-}
+upload_to_gpu_buffer :: ...
 */
+
+set_viewport_scissor :: (cmd_buf: *CommandBuffer, extent: Extent2D) {
+    viewport := VkViewport.{
+        width = cast(float) extent.width,
+        height = cast(float) extent.height,
+        maxDepth = 1.0,
+    };
+    scissor := VkRect2D.{extent = convert(extent)};
+    vkCmdSetViewport(cmd_buf.vk_cmd_buffer, 0, 1, *viewport);
+    vkCmdSetScissor(cmd_buf.vk_cmd_buffer, 0, 1, *scissor);
+}
+
+copy_buffer_to_texture :: (cmd_buf: *CommandBuffer, src_buf: *Buffer, dst_tex: *Texture, size_bytes: u32) {
+    region := VkBufferImageCopy2.{
+        bufferOffset = 0,
+        bufferRowLength = 0,
+        bufferImageHeight = 0,
+        imageSubresource = VkImageSubresourceLayers.{
+            aspectMask = VkImageAspectFlags.COLOR,
+            mipLevel = 0,
+            baseArrayLayer = 0,
+            layerCount = 1,
+        },
+        imageOffset = .{0, 0, 0},
+        imageExtent = convert(dst_tex.desc.size),
+    };
+    copy_info := VkCopyBufferToImageInfo2.{
+        srcBuffer = src_buf.vk_buffer,
+        dstImage = dst_tex.vk_image,
+        dstImageLayout = VkImageLayout.TRANSFER_DST_OPTIMAL,
+        regionCount = 1,
+        pRegions = *region,
+    };
+    vkCmdCopyBufferToImage2(cmd_buf.vk_cmd_buffer, *copy_info);
+}
 
 #scope_file
 
@@ -125,51 +153,9 @@ convert :: (op: StoreOp) -> VkAttachmentStoreOp {
     return VkAttachmentStoreOp.DONT_CARE;
 }
 
-DescriptorBinderPool :: struct {
-  pool: VkDescriptorPool;
-  pool_size : u32 = 256;
-};
-
-DescriptorWrites :: struct {
-    writes: [..]VkWriteDescriptorSet;
-    img_infos: [..]VkDescriptorImageInfo;
-    buf_infos: [..]VkDescriptorBufferInfo;
+convert :: (extent: Extent2D) -> VkExtent2D {
+    return .{width = extent.width, height = extent.height};
 }
-
-descriptor_binder_pool_init :: (dbp: *DescriptorBinderPool, vk_device: VkDevice) {
-    pool_size := dbp.pool_size;
-    pool_sizes := VkDescriptorPoolSize.[
-        .{VkDescriptorType.UNIFORM_BUFFER, DESCRIPTOR_TABLE_CBV_COUNT * pool_size},
-        .{VkDescriptorType.UNIFORM_BUFFER_DYNAMIC, DESCRIPTOR_TABLE_CBV_COUNT * pool_size},
-        .{VkDescriptorType.STORAGE_BUFFER, TOTAL_SRV_BINDINGS * pool_size},
-        .{VkDescriptorType.SAMPLED_IMAGE, TOTAL_SRV_BINDINGS * pool_size},
-        .{VkDescriptorType.STORAGE_IMAGE, TOTAL_SRV_BINDINGS * pool_size},
-        .{VkDescriptorType.STORAGE_IMAGE, TOTAL_UAV_BINDINGS * pool_size},
-        .{VkDescriptorType.STORAGE_BUFFER, TOTAL_UAV_BINDINGS * pool_size},
-        // TODO: separate sampler thing in table
-        .{VkDescriptorType.SAMPLER, TOTAL_UAV_BINDINGS * pool_size},
-    ];
-
-    pool_info := VkDescriptorPoolCreateInfo.{
-        maxSets = pool_size,
-        poolSizeCount = pool_sizes.count,
-        pPoolSizes = pool_sizes.data,
-    };
-    descriptor_binder_pool_destroy(dbp, vk_device);
-
-    pool: VkDescriptorPool;
-    VK_CHECK(vkCreateDescriptorPool(vk_device, *pool_info, nullptr, *pool));
-}
-
-descriptor_binder_pool_reset :: (dbp: *DescriptorBinderPool, vk_device: VkDevice) {
-  VK_CHECK(vkResetDescriptorPool(vk_device, pool, 0));
-}
-
-descriptor_binder_pool_destroy :: (dbp: *DescriptorBinderPool, vk_device: VkDevice) {
-    vkDestroyDescriptorPool(vk_device, dbp.pool, null);
-}
-
-
 
 #import "Vulkan";
 #import "graphics/rhi";

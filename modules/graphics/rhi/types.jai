@@ -27,6 +27,9 @@ CommandPool :: struct {
 
 CommandBuffer :: struct {
     using specific: CommandBufferBackend;
+    binding_table: DescriptorBindingTable;
+    descriptors_dirty: bool;
+    bound_pipeline: *Pipeline;
 }
 
 Swapchain :: struct {
@@ -55,9 +58,19 @@ BufferCreateFlags :: enum_flags u32 {
     HostVisible :: 1 << 0;
 };
 
+BufferUsageFlags :: enum_flags u32 {
+    None :: 0;
+    TransferSrc :: 1 << 0;
+    TransferDst :: 1 << 1;
+    Uniform :: 1 << 2;
+    Storage :: 1 << 3;
+    Vertex :: 1 << 4;
+};
+
 BufferDesc :: struct {
     size: u32;
     flags: BufferCreateFlags;
+    usage: BufferUsageFlags = .TransferDst | .TransferSrc;
 }
 
 Buffer :: struct {
@@ -440,8 +453,15 @@ TextureUsageFlags :: enum u32 {
     SAMPLED :: 1 << 3;
 }
 
+TextureDimension :: enum {
+    D1;
+    D2;
+    D3;
+}
+
 TextureDesc :: struct {
     size: Extent3D;
+    dimension: TextureDimension;
     format: TextureFormat;
     usage: TextureUsageFlags;
     mip_levels: u32 = 1;
@@ -553,6 +573,26 @@ QueueSubmitDesc :: struct {
     waits: []SubmitWait;
     signal_semaphores: []*Semaphore;
     fence: *Fence;
+}
+
+BindPool :: struct {
+    using specific: BindPoolBackend;
+}
+
+GraphicsPipelineDesc :: struct {
+    vertex_spirv: []u8;
+    fragment_spirv: []u8;
+    color_format: TextureFormat;
+    depth_format: TextureFormat = .UNDEFINED;
+}
+
+Pipeline :: struct {
+    using specific: PipelineBackend;
+}
+
+BindlessBindingUsage :: struct {
+    used: bool;
+    set_index: u32;
 }
 
 #import "Math";

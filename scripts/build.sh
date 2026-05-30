@@ -7,6 +7,8 @@ BUILD_DIR="$ROOT/build"
 
 mkdir -p "$BUILD_DIR"
 
+export FFARM_ROOT="$ROOT"
+
 stage_sdl3_linux() {
     SDL3_SO="$ROOT/third_party/jai-sdl3/linux/bin/libSDL3.so"
     if [ ! -f "$SDL3_SO" ]; then
@@ -22,7 +24,6 @@ fi
 VK_JAI_BINDING_DIR=$ROOT/third_party/Vulkan
 
 if [ ! -f "$VK_JAI_BINDING_DIR/vk.xml" ]; then
-    # TODO: check for VULKAN_SDK and vk.xml existence
     echo "initializing vulkan bindings..."
     cp "$VULKAN_SDK/share/vulkan/registry/vk.xml" "$VK_JAI_BINDING_DIR/vk.xml"
     cp "$VULKAN_SDK/share/vulkan/registry/video.xml" "$VK_JAI_BINDING_DIR/video.xml"
@@ -31,6 +32,12 @@ if [ ! -f "$VK_JAI_BINDING_DIR/vk.xml" ]; then
     jai generate.jai
     cd "$CWD"
 fi
+
+if [ ! -f "$ROOT/third_party/jai-spirv-reflect/bindings.jai" ]; then
+    jai "$ROOT/third_party/jai-spirv-reflect/generate.jai"
+fi
+
+python3 "$ROOT/scripts/compile_shaders.py"
 
 stage_sdl3_linux
 

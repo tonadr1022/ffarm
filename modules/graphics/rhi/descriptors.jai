@@ -4,6 +4,11 @@ TOTAL_CBV_BINDINGS :: ROOT_CBV_COUNT + DESCRIPTOR_TABLE_CBV_COUNT;
 TOTAL_SRV_BINDINGS :: 12;
 TOTAL_UAV_BINDINGS :: 12;
 
+CBV_BINDING_BASE :: 3000;
+SRV_BINDING_BASE :: 2000;
+UAV_BINDING_BASE :: 1000;
+k_invalid_bindless_index :: 0xffff_ffff;
+
 DescriptorBindingTable :: struct {
     CBV: [TOTAL_CBV_BINDINGS]*Buffer;
     CBV_offsets: [TOTAL_CBV_BINDINGS]int;
@@ -11,6 +16,7 @@ DescriptorBindingTable :: struct {
     // uint64_t version of rhi::BufferHandle/TextureHandle
     SRV_buffers: [TOTAL_SRV_BINDINGS]*Buffer;
     SRV_textures: [TOTAL_SRV_BINDINGS]*Texture;
+    SRV_texture_views: [TOTAL_SRV_BINDINGS]*TextureView;
     // -2 == buffer, -1 == texture, >= 0 == texture view;
     SRV_subresources: [TOTAL_SRV_BINDINGS]int;
     k_tex_resource :: -1;
@@ -18,8 +24,9 @@ DescriptorBindingTable :: struct {
     SRV_offsets: [TOTAL_SRV_BINDINGS]int;
     UAV_buffers: [TOTAL_UAV_BINDINGS]*Buffer;
     UAV_textures: [TOTAL_UAV_BINDINGS]*Texture;
+    UAV_texture_views: [TOTAL_UAV_BINDINGS]*TextureView;
     // -2 == buffer, -1 == texture, >= 0 == texture view;
-    UAV_subresources: [TOTAL_SRV_BINDINGS]int;
+    UAV_subresources: [TOTAL_UAV_BINDINGS]int;
     UAV_offsets: [TOTAL_SRV_BINDINGS]int;
 };
 

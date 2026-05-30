@@ -1,18 +1,20 @@
 #include "shader_core.h"
+#include "shared_shader_core.h"
+#include "shared_basic_tri.h"
 
 struct VOut {
-  float4 color;
-};
-
-struct Vertex {
-  float3 position : SV_POSITION;
-  float2 uv;
-  float3 color;
+  float4 pos : SV_Position;
+  float2 uv : TEXCOORD0;
+  float3 color : TEXCOORD1;
 };
 
 StructuredBuffer<Vertex> vertices : register(t0);
 
 VOut main(uint vert_id : SV_VertexID) {
+  Vertex v = vertices[vert_id];
   VOut o;
-  o.color = float4(1, 1, 1, 1);
+  o.pos = float4(v.position, 1.0);
+  o.uv = v.uv;
+  o.color = v.color;
+  return o;
 }
