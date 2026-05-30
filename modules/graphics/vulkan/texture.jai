@@ -1,6 +1,7 @@
 TextureBackend :: struct {
     vk_image: VkImage;
     vma_allocation: VmaAllocation;
+    is_external: bool;
 }
 
 TextureViewBackend :: struct {
@@ -25,6 +26,12 @@ texture_init :: (tex: *Texture, desc: *TextureDesc, device: *Device) {
         usage = VmaMemoryUsage.AUTO_PREFER_DEVICE,
     };
     VK_CHECK(vmaCreateImage(device.vma_allocator, *cinfo, *alloc_cinfo, *tex.vk_image, *tex.vma_allocation, null));
+}
+
+texture_init_external :: (tex: *Texture, vk_image: VkImage, desc: *TextureDesc) {
+    tex.is_external = true;
+    tex.vk_image = vk_image;
+    tex.desc = desc.*;
 }
 
 texture_destroy :: (tex: *Texture, device: *Device) {

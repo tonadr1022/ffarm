@@ -3,12 +3,17 @@ SwapchainBackend :: struct {
     images: [..]VkImage;
     image_count: u32;
     device: VkDevice;
+    back_buffers: [..]RHI.Texture;
+    back_buffer_views: [..]RHI.TextureView;
 }
 
 swapchain_init :: (swapchain: *Swapchain, device: *Device, surface: SurfaceT, width: s32, height: s32, vsync: bool) {
     swapchain.device = device.device;
     vk_swapchain := create_swapchain(device, surface, width, height, vsync, VK_NULL_HANDLE);
     swapchain.swapchain = vk_swapchain;
+}
+
+swapchain_get_back_buffer :: (swapchain: *Swapchain, device: *Device) -> *Texture {
 }
 
 swapchain_destroy :: (swapchain: *Swapchain) {
@@ -96,3 +101,6 @@ create_swapchain :: (device: *Device, surface: SurfaceT, width: s32, height: s32
     }
     return new_vk_swapchain;
 }
+
+#import "graphics/rhi";
+#import "Vulkan";
