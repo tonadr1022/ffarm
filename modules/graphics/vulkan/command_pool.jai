@@ -1,3 +1,8 @@
+CommandPoolBackend :: struct {
+    pool: VkCommandPool;
+    queue_family_index: u32;
+}
+
 command_pool_init :: (pool: *CommandPool, device: *Device, queue: QueueFamily) {
     create_info: VkCommandPoolCreateInfo;
     create_info.flags = VkCommandPoolCreateFlags.RESET_COMMAND_BUFFER;

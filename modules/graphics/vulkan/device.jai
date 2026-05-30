@@ -200,11 +200,6 @@ CommandQueueBackend :: struct {
     queue_family_index: u32;
 }
 
-CommandPoolBackend :: struct {
-    pool: VkCommandPool;
-    queue_family_index: u32;
-}
-
 CommandBufferBackend :: struct {
     vk_cmd_buffer: VkCommandBuffer;
 }

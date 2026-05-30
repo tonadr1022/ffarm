@@ -78,6 +78,34 @@ queue_submit :: (device: *Device, desc: *QueueSubmitDesc) {
     VK_CHECK(vkQueueSubmit(device.graphics_queue.queue, 1, *submit_info, fence));
 }
 
+copy_buffer_to_buffer :: (cmd_buf: *CommandBuffer, src_buf: *Buffer, dst_buf: *Buffer,
+    size: u32, src_offset: u32 = 0, dst_offset: u32 = 0) {
+    region := VkBufferCopy2.{
+        size = size,
+        srcOffset = src_offset,
+        dstOffset = dst_offset,
+    };
+    copy_info := VkCopyBufferInfo2.{
+        srcBuffer = src_buf.vk_buffer,
+        dstBuffer = dst_buf.vk_buffer,
+        regionCount = 1,
+        pRegions = *region, 
+
+    };
+    vkCmdCopyBuffer2(cmd_buf.vk_cmd_buffer, *copy_info);
+}
+
+/*
+upload_to_gpu_buffer :: (buf: *Buffer, device: Device, data: *$T, size: u32, src_offset: u32 = 0, dst_offset: u32 = 0) {
+    copy: VkCopyBufferInfo2.{
+        srcOffset = src_offset,
+        dstOffset = dst_offset,
+        size = size,
+    };
+    vkCmdCopyBuffer2();
+}
+*/
+
 #scope_file
 
 convert :: (op: LoadOp) -> VkAttachmentLoadOp {
@@ -96,6 +124,52 @@ convert :: (op: StoreOp) -> VkAttachmentStoreOp {
     }
     return VkAttachmentStoreOp.DONT_CARE;
 }
+
+DescriptorBinderPool :: struct {
+  pool: VkDescriptorPool;
+  pool_size : u32 = 256;
+};
+
+DescriptorWrites :: struct {
+    writes: [..]VkWriteDescriptorSet;
+    img_infos: [..]VkDescriptorImageInfo;
+    buf_infos: [..]VkDescriptorBufferInfo;
+}
+
+descriptor_binder_pool_init :: (dbp: *DescriptorBinderPool, vk_device: VkDevice) {
+    pool_size := dbp.pool_size;
+    pool_sizes := VkDescriptorPoolSize.[
+        .{VkDescriptorType.UNIFORM_BUFFER, DESCRIPTOR_TABLE_CBV_COUNT * pool_size},
+        .{VkDescriptorType.UNIFORM_BUFFER_DYNAMIC, DESCRIPTOR_TABLE_CBV_COUNT * pool_size},
+        .{VkDescriptorType.STORAGE_BUFFER, TOTAL_SRV_BINDINGS * pool_size},
+        .{VkDescriptorType.SAMPLED_IMAGE, TOTAL_SRV_BINDINGS * pool_size},
+        .{VkDescriptorType.STORAGE_IMAGE, TOTAL_SRV_BINDINGS * pool_size},
+        .{VkDescriptorType.STORAGE_IMAGE, TOTAL_UAV_BINDINGS * pool_size},
+        .{VkDescriptorType.STORAGE_BUFFER, TOTAL_UAV_BINDINGS * pool_size},
+        // TODO: separate sampler thing in table
+        .{VkDescriptorType.SAMPLER, TOTAL_UAV_BINDINGS * pool_size},
+    ];
+
+    pool_info := VkDescriptorPoolCreateInfo.{
+        maxSets = pool_size,
+        poolSizeCount = pool_sizes.count,
+        pPoolSizes = pool_sizes.data,
+    };
+    descriptor_binder_pool_destroy(dbp, vk_device);
+
+    pool: VkDescriptorPool;
+    VK_CHECK(vkCreateDescriptorPool(vk_device, *pool_info, nullptr, *pool));
+}
+
+descriptor_binder_pool_reset :: (dbp: *DescriptorBinderPool, vk_device: VkDevice) {
+  VK_CHECK(vkResetDescriptorPool(vk_device, pool, 0));
+}
+
+descriptor_binder_pool_destroy :: (dbp: *DescriptorBinderPool, vk_device: VkDevice) {
+    vkDestroyDescriptorPool(vk_device, dbp.pool, null);
+}
+
+
 
 #import "Vulkan";
 #import "graphics/rhi";

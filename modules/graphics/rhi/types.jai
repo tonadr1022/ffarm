@@ -8,8 +8,13 @@ SurfaceT :: struct {
     _handle: u64;
 }
 
+DeviceInfo :: struct {
+    // todo: check actually
+    is_unified_memory :: false;
+}
 Device :: struct {
     using specific: DeviceBackend;
+    info: DeviceInfo;
 }
 
 CommandQueue :: struct {
@@ -47,7 +52,7 @@ Fence :: struct {
 
 BufferCreateFlags :: enum_flags u32 {
     None :: 0;
-    HostVisible :: 1;
+    HostVisible :: 1 << 0;
 };
 
 BufferDesc :: struct {
@@ -57,6 +62,7 @@ BufferDesc :: struct {
 
 Buffer :: struct {
     using specific: BufferBackend;
+    data: *void;
 }
 
 // matches VkFormat
