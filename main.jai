@@ -2,9 +2,34 @@
 #import "Basic";
 #import "platform";
 #import "jai-sdl3";
+#import "Command_Line";
+#import "Hash_Table";
+#import "core/object_pool";
+
+#import "runtime/assets";
+
 REN :: #import "graphics/renderer";
 
+CLI_Args :: struct {
+    quit_after_frames: s32 = -1;
+}
+
+
 main :: () {
+    success, handle := load_sprite("/home/tony/Downloads/Farm RPG FREE 16x16 - Tiny Asset Pack/Character/character-all.json");
+    print("success: %\n", success);
+    print("handle: % %\n", handle, is_valid(handle));
+
+    ok, args, is_set, free_args := parse_arguments(CLI_Args);
+    if is_set.quit_after_frames {
+        print("Quitting after % frames\n", args.quit_after_frames);
+    }
+    if !ok {
+        print("Error: Failed to parse command line arguments\n");
+        exit(1);
+    }
+
+
     platform_init();
     window: Window;
     window_init(*window, "window", 800, 800);
@@ -12,6 +37,7 @@ main :: () {
 
     should_quit := false;
 
+    frame_number := 0;
     while !should_quit {
         ev: SDL_Event;
         while (SDL_PollEvent(*ev)) {
@@ -25,6 +51,11 @@ main :: () {
             }
         }
         REN.do_render();
+
+        frame_number+=1;
+        if args.quit_after_frames != -1 && frame_number >= args.quit_after_frames {
+            should_quit = true;
+        }
     }
 
     REN.shutdown();

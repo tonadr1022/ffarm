@@ -4,3 +4,6 @@
 [submodule "third_party/vulkan-jai-binding"]
 	path = third_party/Vulkan
 	url = git@github.com:tonadr1022/vulkan-jai-binding.git
+[submodule "third_party/jaison"]
+	path = third_party/jaison
+	url = git@github.com:rluba/jaison.git

@@ -1,7 +1,7 @@
 //
 // This file was auto-generated using the following command:
 //
-// jai generate.jai
+// jai /home/tony/personal/ffarm/third_party/jai-spirv-reflect/generate.jai
 //
 
 

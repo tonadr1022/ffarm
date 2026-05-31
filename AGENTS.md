@@ -7,6 +7,8 @@ This game is written in jai. The jai core libraries, compiler binary, and exampl
 
 ## Running
 ./scripts/build.sh -quiet +Autorun
+### Smoke test 30 frames
+./scripts/build.sh -quiet +Autorun -quit_after_frames 30
 
 
 The third_party/ dir contains third party libraries. Most or all have bindings for Jai generated with the bindings generator.
