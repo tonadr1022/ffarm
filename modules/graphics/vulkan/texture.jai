@@ -11,6 +11,7 @@ TextureViewBackend :: struct {
 
 texture_init :: (tex: *Texture, desc: *TextureDesc, device: *Device) {
     assert(desc.size.width > 0 && desc.size.height > 0 && desc.size.depth > 0);
+    assert(tex != null);
     tex.desc = desc.*;
     tex.current_state = .UNDEFINED;
     tex.is_external = false;

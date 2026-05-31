@@ -47,18 +47,18 @@ aseprite_sheet_destroy :: (sheet: *AsepriteSheet) {
     free(sheet.meta.scale);
 }
 
-load_sprite_2d_asset :: (filename: string, asset: *SpriteAsset) -> success: bool {
+load_sprite_2d_asset_metadata :: (filename: string, asset: *SpriteAsset) -> success: bool {
     ok, root := json_parse_file(filename, AsepriteSheet);
     defer aseprite_sheet_destroy(*root);
     if !ok return false;
-    convert_aseprite_to_engine_format(*root, asset);
+    convert_aseprite_to_engine_format(*root, asset, filename);
     return true;
 }
 
 #scope_file
 
-convert_aseprite_to_engine_format :: (sheet: *AsepriteSheet, asset: *SpriteAsset) {
-    asset.name = copy_string(sheet.meta.image);
+convert_aseprite_to_engine_format :: (sheet: *AsepriteSheet, asset: *SpriteAsset, metadata_filename: string) {
+    asset.path = path_join(path_strip_filename(metadata_filename), sheet.meta.image);
     for * frame_tag : sheet.meta.frameTags {
         animation: SpriteAnimation2D;
         animation.name = copy_string(frame_tag.name);

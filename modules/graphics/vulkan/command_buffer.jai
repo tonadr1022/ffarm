@@ -9,6 +9,11 @@ cmd_end :: (cmd_buf: *CommandBuffer) {
     VK_CHECK(vkEndCommandBuffer(cmd_buf.vk_cmd_buffer));
 }
 
+push_constants :: (cmd_buf: *CommandBuffer, size: u32, data: *void, offset: u32 = 0) {
+    vkCmdPushConstants(cmd_buf.vk_cmd_buffer, cmd_buf.bound_pipeline.pipeline_layout,
+        VkShaderStageFlags.ALL_GRAPHICS, offset, size, data);
+}
+
 begin_render_pass :: (cmd_buf: *CommandBuffer, pass_desc: *RenderPassDesc) {
     vk_color_atts: [RenderPassDesc.max_color_attachments]VkRenderingAttachmentInfo;
     for i : 0..pass_desc.color_attachment_count-1 {
@@ -95,14 +100,12 @@ copy_buffer_to_buffer :: (cmd_buf: *CommandBuffer, src_buf: *Buffer, dst_buf: *B
     vkCmdCopyBuffer2(cmd_buf.vk_cmd_buffer, *copy_info);
 }
 
-/*
-upload_to_gpu_buffer :: ...
-*/
-
-set_viewport_scissor :: (cmd_buf: *CommandBuffer, extent: Extent2D) {
+set_viewport_scissor :: (cmd_buf: *CommandBuffer, extent: Extent2D, offset: Offset2D = Offset2D.{0, 0}) {
     viewport := VkViewport.{
+        x = cast(float) offset.x,
+        y = cast(float)extent.height - offset.y,
         width = cast(float) extent.width,
-        height = cast(float) extent.height,
+        height = -cast(float) extent.height,
         maxDepth = 1.0,
     };
     scissor := VkRect2D.{extent = convert(extent)};

@@ -92,7 +92,7 @@ frame_gpu_allocator_destroy :: (fga: *FrameGpuAllocator) {
 Vertex :: struct {
     position: Vector3;
     uv: Vector2;
-    color: Vector3;
+    color := Vector3.{1.0, 1.0, 1.0};
 }
 
 FrameSync :: struct {
@@ -198,6 +198,8 @@ init :: (window: *Window) {
         color_format = swapchain.format,
     };
     basic_tri_pipeline = RHI.pipeline_create(*device, *pipe_desc);
+
+    sprite_renderer_init(*device);
 }
 
 ImmediateSubmitData :: struct {
@@ -230,9 +232,15 @@ immediate_submit_end :: (cmd: *ImmediateSubmitData) {
     RHI.command_pool_destroy(*cmd.cmd_pool, *renderer.device);
 }
 
+wait_for_device :: () {
+    RHI.device_wait_idle(*renderer.device);
+}
+
 shutdown :: () {
     using renderer;
     RHI.device_wait_idle(*device);
+
+    sprite_renderer_shutdown();
 
     if basic_tri_pipeline RHI.pipeline_destroy(*device, basic_tri_pipeline);
     frame_gpu_allocator_destroy(*staging_buf_allocator);
@@ -300,9 +308,10 @@ do_render :: () {
     RHI.set_viewport_scissor(cmd_buf, swapchain.extent);
     RHI.bind_pipeline(cmd_buf, basic_tri_pipeline);
     RHI.bind_srv(cmd_buf, get(tri_buffer), slot=0);
-    RHI.bind_srv_texture_view(cmd_buf, get(test_img_view), slot=1);
+    // RHI.bind_srv_texture_view(cmd_buf, get(test_img_view), slot=1);
     RHI.bind_cbv(cmd_buf, get(tint_buffer), slot=0, offset_bytes=0, size_bytes=16);
-    RHI.draw(cmd_buf, *device, *frame_data.bind_pool, vertex_count=3, instance_count=1);
+    // RHI.draw(cmd_buf, *device, *frame_data.bind_pool, vertex_count=3, instance_count=1);
+    sprite_renderer_render_pass_draw(cmd_buf);
     RHI.end_render_pass(cmd_buf);
 
     present_barrier := RHI.TextureBarrierDesc.{
@@ -325,6 +334,16 @@ do_render :: () {
 
     curr_frame_in_flight_idx = (curr_frame_in_flight_idx + 1) % frames_in_flight;
     curr_frame_number += 1;
+}
+
+#scope_module
+
+renderer_get_frame_data :: () -> *FrameRenderData {
+    return *renderer.frames[renderer.curr_frame_in_flight_idx];
+}
+
+renderer_get_bind_pool :: () -> *RHI.BindPool {
+    return *renderer_get_frame_data().bind_pool;
 }
 
 #scope_file

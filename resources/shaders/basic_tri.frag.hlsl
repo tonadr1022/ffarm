@@ -13,7 +13,7 @@ struct VOut {
 };
 
 Texture2D albedo : register(t1);
-SamplerState samp : register(s100);
+SamplerState samp : register(s103);
 CONSTANT_BUFFER(TintData, tint, 0);
 
 FOut main(VOut vout) {

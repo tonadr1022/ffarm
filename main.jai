@@ -16,10 +16,6 @@ CLI_Args :: struct {
 
 
 main :: () {
-    success, handle := load_sprite("/home/tony/Downloads/Farm RPG FREE 16x16 - Tiny Asset Pack/Character/character-all.json");
-    print("success: %\n", success);
-    print("handle: % %\n", handle, is_valid(handle));
-
     ok, args, is_set, free_args := parse_arguments(CLI_Args);
     if is_set.quit_after_frames {
         print("Quitting after % frames\n", args.quit_after_frames);
@@ -37,6 +33,8 @@ main :: () {
 
     should_quit := false;
 
+    success, handle := load_sprite("/home/tony/Downloads/Farm RPG FREE 16x16 - Tiny Asset Pack/Character/character-all.json");
+
     frame_number := 0;
     while !should_quit {
         ev: SDL_Event;
@@ -50,6 +48,13 @@ main :: () {
                 case;
             }
         }
+
+        sprite_asset := get(handle);
+        sprite := *sprite_asset.animations[0].frames[0].sprite;
+        sprite.texture = sprite_asset.texture;
+        sprite.texture_view = sprite_asset.texture_view;
+        REN.sprite_renderer_draw_sprite(sprite);
+
         REN.do_render();
 
         frame_number+=1;
@@ -57,6 +62,10 @@ main :: () {
             should_quit = true;
         }
     }
+
+    REN.wait_for_device();
+
+    unload_sprite(handle);
 
     REN.shutdown();
 

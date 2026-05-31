@@ -24,7 +24,9 @@ pipeline_create :: (device: *Device, desc: *GraphicsPipelineDesc) -> *Pipeline {
 
     for * binding : layout_bindings {
         if binding.descriptorType == VkDescriptorType.SAMPLER && binding.binding >= 100 {
-            binding.pImmutableSamplers = device.static_samplers.data;
+            sampler_index := binding.binding - 100;
+            assert(sampler_index < device.static_samplers.count);
+            binding.pImmutableSamplers = device.static_samplers.data + sampler_index;
         }
     }
 

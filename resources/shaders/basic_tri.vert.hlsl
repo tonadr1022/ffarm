@@ -1,6 +1,6 @@
 #include "shader_core.h"
-#include "shared_shader_core.h"
 #include "shared_basic_tri.h"
+#include "shared_shader_core.h"
 
 struct VOut {
   float4 pos : SV_Position;

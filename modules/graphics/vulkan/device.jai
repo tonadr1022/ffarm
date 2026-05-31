@@ -234,6 +234,8 @@ PipelineBackend :: struct {
 #scope_file
 
 init_static_samplers :: (backend: *Device) {
+    sampler: VkSampler;
+
     // s100 in ROOT_SIGNATURE: linear clamp
     sampler_info := VkSamplerCreateInfo.{
         magFilter = VkFilter.LINEAR,
@@ -243,7 +245,36 @@ init_static_samplers :: (backend: *Device) {
         addressModeV = VkSamplerAddressMode.CLAMP_TO_EDGE,
         addressModeW = VkSamplerAddressMode.CLAMP_TO_EDGE,
     };
-    sampler: VkSampler;
+    VK_CHECK(vkCreateSampler(backend.device, *sampler_info, null, *sampler));
+    array_add(*backend.static_samplers, sampler);
+
+    // s101 in ROOT_SIGNATURE: linear wrap
+    sampler_info.magFilter = VkFilter.LINEAR;
+    sampler_info.minFilter = VkFilter.LINEAR;
+    sampler_info.mipmapMode = VkSamplerMipmapMode.LINEAR;
+    sampler_info.addressModeU = VkSamplerAddressMode.REPEAT;
+    sampler_info.addressModeV = VkSamplerAddressMode.REPEAT;
+    sampler_info.addressModeW = VkSamplerAddressMode.REPEAT;
+    VK_CHECK(vkCreateSampler(backend.device, *sampler_info, null, *sampler));
+    array_add(*backend.static_samplers, sampler);
+
+    // s102 in ROOT_SIGNATURE: linear mirror
+    sampler_info.magFilter = VkFilter.LINEAR;
+    sampler_info.minFilter = VkFilter.LINEAR;
+    sampler_info.mipmapMode = VkSamplerMipmapMode.LINEAR;
+    sampler_info.addressModeU = VkSamplerAddressMode.MIRRORED_REPEAT;
+    sampler_info.addressModeV = VkSamplerAddressMode.MIRRORED_REPEAT;
+    sampler_info.addressModeW = VkSamplerAddressMode.MIRRORED_REPEAT;
+    VK_CHECK(vkCreateSampler(backend.device, *sampler_info, null, *sampler));
+    array_add(*backend.static_samplers, sampler);
+
+    // s103 in ROOT_SIGNATURE: nearest clamp
+    sampler_info.magFilter = VkFilter.NEAREST;
+    sampler_info.minFilter = VkFilter.NEAREST;
+    sampler_info.mipmapMode = VkSamplerMipmapMode.NEAREST;
+    sampler_info.addressModeU = VkSamplerAddressMode.CLAMP_TO_EDGE;
+    sampler_info.addressModeV = VkSamplerAddressMode.CLAMP_TO_EDGE;
+    sampler_info.addressModeW = VkSamplerAddressMode.CLAMP_TO_EDGE;
     VK_CHECK(vkCreateSampler(backend.device, *sampler_info, null, *sampler));
     array_add(*backend.static_samplers, sampler);
 }
