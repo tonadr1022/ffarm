@@ -35,6 +35,15 @@ buffer_init :: (buf: *Buffer, desc: *BufferDesc, device: *Device) {
         buf.data = allocation_info.pMappedData;
         assert(buf.data != null);
     }
+
+    if desc.name.count > 0 {
+        name_info := VkDebugUtilsObjectNameInfoEXT.{
+            objectType = VkObjectType.BUFFER,
+            objectHandle = xx buf.vk_buffer,
+            pObjectName = temp_c_string(desc.name),
+        };
+        vkSetDebugUtilsObjectNameEXT(device.device, *name_info);
+    }
 }
 
 buffer_destroy :: (buf: *Buffer, device: *Device) {
@@ -46,4 +55,4 @@ buffer_destroy :: (buf: *Buffer, device: *Device) {
 #import "jai-vma";
 #import "graphics/rhi";
 #import "Vulkan";
-
+#import "Basic";

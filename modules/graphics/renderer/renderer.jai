@@ -307,10 +307,6 @@ do_render :: () {
     RHI.begin_render_pass(cmd_buf, *pass_desc);
     RHI.set_viewport_scissor(cmd_buf, swapchain.extent);
     RHI.bind_pipeline(cmd_buf, basic_tri_pipeline);
-    RHI.bind_srv(cmd_buf, get(tri_buffer), slot=0);
-    // RHI.bind_srv_texture_view(cmd_buf, get(test_img_view), slot=1);
-    RHI.bind_cbv(cmd_buf, get(tint_buffer), slot=0, offset_bytes=0, size_bytes=16);
-    // RHI.draw(cmd_buf, *device, *frame_data.bind_pool, vertex_count=3, instance_count=1);
     sprite_renderer_render_pass_draw(cmd_buf);
     RHI.end_render_pass(cmd_buf);
 
@@ -338,8 +334,14 @@ do_render :: () {
 
 #scope_module
 
+MAX_FRAMES_IN_FLIGHT :: 3;
+
 renderer_get_frame_data :: () -> *FrameRenderData {
     return *renderer.frames[renderer.curr_frame_in_flight_idx];
+}
+
+renderer_get_curr_frame_in_flight_idx :: () -> u32 {
+    return renderer.curr_frame_in_flight_idx;
 }
 
 renderer_get_bind_pool :: () -> *RHI.BindPool {
@@ -347,8 +349,6 @@ renderer_get_bind_pool :: () -> *RHI.BindPool {
 }
 
 #scope_file
-
-MAX_FRAMES_IN_FLIGHT :: 3;
 
 load_binary_file :: (path: string) -> []u8 {
     content, success := read_entire_file(path, false, false);

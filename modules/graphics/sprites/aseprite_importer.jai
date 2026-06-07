@@ -70,6 +70,8 @@ convert_aseprite_to_engine_format :: (sheet: *AsepriteSheet, asset: *SpriteAsset
                                             cast(float)sheet_frame.frame.y / cast(float)sheet.meta.size.h};
             frame.sprite.uv_max = .{cast(float)(sheet_frame.frame.x + sheet_frame.frame.w) / cast(float)sheet.meta.size.w, 
                                             cast(float)(sheet_frame.frame.y + sheet_frame.frame.h) / cast(float)sheet.meta.size.h};
+            frame.sprite.frame_w = cast(u32)sheet_frame.frame.w;
+            frame.sprite.frame_h = cast(u32)sheet_frame.frame.h;
 
             array_add(*animation.frames, frame);
         }

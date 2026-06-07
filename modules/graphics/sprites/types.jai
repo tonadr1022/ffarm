@@ -22,6 +22,8 @@ Sprite :: struct {
     color: Vector4 = Vector4.{1.0, 1.0, 1.0, 1.0};
     uv_min: Vector2;
     uv_max: Vector2;
+    frame_w: u32;
+    frame_h: u32;
 }
 
 #import "Math";

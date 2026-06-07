@@ -71,6 +71,7 @@ BufferDesc :: struct {
     size: u32;
     flags: BufferCreateFlags;
     usage: BufferUsageFlags = .TransferDst | .TransferSrc;
+    name: string;
 }
 
 Buffer :: struct {

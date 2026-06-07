@@ -120,6 +120,7 @@ device_init :: (backend: *Device, settings: *DeviceSettings) {
 
     vulkan13_features: VkPhysicalDeviceVulkan13Features;
     vulkan13_features.dynamicRendering = VK_TRUE;
+    vulkan13_features.shaderDemoteToHelperInvocation = VK_TRUE;
     vulkan12_features: VkPhysicalDeviceVulkan12Features;
     vulkan12_features.scalarBlockLayout = VK_TRUE;
     vulkan13_features.pNext = *vulkan12_features;

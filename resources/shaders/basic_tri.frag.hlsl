@@ -9,16 +9,17 @@ struct FOut {
 struct VOut {
   float4 pos : SV_Position;
   float2 uv : TEXCOORD0;
-  float3 color : TEXCOORD1;
+  float4 color : COLOR0;
 };
 
 Texture2D albedo : register(t1);
 SamplerState samp : register(s103);
-CONSTANT_BUFFER(TintData, tint, 0);
 
 FOut main(VOut vout) {
   FOut result;
-  result.color =
-      albedo.Sample(samp, vout.uv) * float4(vout.color, 1.0) * tint.color;
+  result.color = albedo.Sample(samp, vout.uv) * vout.color;
+  if (result.color.a < 0.1) {
+    discard;
+  }
   return result;
 }

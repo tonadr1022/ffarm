@@ -7,6 +7,8 @@
 #import "core/object_pool";
 
 #import "runtime/assets";
+#import "runtime/entity";
+#import "game/camera";
 
 REN :: #import "graphics/renderer";
 
@@ -34,9 +36,27 @@ main :: () {
     should_quit := false;
 
     success, handle := load_sprite("/home/tony/Downloads/Farm RPG FREE 16x16 - Tiny Asset Pack/Character/character-all.json");
+    if !success {
+        print("Failed to load sprite\n");
+        exit(1);
+    }
+
+    entity: Entity;
+    entity.sprite = handle;
+    entity.transform.position = .{200, 300, 0};
+    entity.transform.scale = 4.0;
+
+    win_w, win_h := window_get_size(*window);
+    viewport: Viewport = .{width=win_w, height=win_h};
+    camera: Camera2D = .{position=.{cast(float)win_w * 0.5, cast(float)win_h * 0.5}, zoom=1.0};
 
     frame_number := 0;
+    last_ticks := SDL_GetTicks();
     while !should_quit {
+        now := SDL_GetTicks();
+        dt := cast(float)(now - last_ticks) / 1000.0;
+        last_ticks = now;
+
         ev: SDL_Event;
         while (SDL_PollEvent(*ev)) {
             if ev.type == {
@@ -49,12 +69,19 @@ main :: () {
             }
         }
 
-        sprite_asset := get(handle);
-        sprite := *sprite_asset.animations[0].frames[0].sprite;
-        sprite.texture = sprite_asset.texture;
-        sprite.texture_view = sprite_asset.texture_view;
-        REN.sprite_renderer_draw_sprite(sprite);
+        keys := SDL_GetKeyboardState(null);
+        move_speed := 200.0 * dt;
+        if keys[SDL_Scancode.W] entity.transform.position.y -= move_speed;
+        if keys[SDL_Scancode.S] entity.transform.position.y += move_speed;
+        if keys[SDL_Scancode.A] entity.transform.position.x -= move_speed;
+        if keys[SDL_Scancode.D] entity.transform.position.x += move_speed;
 
+        sprite_asset := get(handle);
+        frame_sprite := *sprite_asset.animations[0].frames[0].sprite;
+        instance := entity_make_sprite_instance(*entity, frame_sprite);
+
+        REN.sprite_renderer_begin_frame(camera.position, camera2d_get_world_to_clip(camera, viewport));
+        REN.sprite_renderer_draw(sprite_asset.texture_view, instance);
         REN.do_render();
 
         frame_number+=1;
