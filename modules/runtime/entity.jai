@@ -7,6 +7,7 @@ Transform :: struct {
 Entity :: struct {
     transform: Transform;
     sprite: SpriteAssetHandle;
+    animation2d_player: Animation2DPlayer;
 }
 
 entity_make_sprite_instance :: (entity: *Entity, sprite: *Sprite) -> SpriteInstance {

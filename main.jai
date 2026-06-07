@@ -5,10 +5,13 @@
 #import "Command_Line";
 #import "Hash_Table";
 #import "core/object_pool";
+#import "String";
 
 #import "runtime/assets";
 #import "runtime/entity";
 #import "game/camera";
+
+#import "graphics/sprites";
 
 REN :: #import "graphics/renderer";
 
@@ -16,6 +19,55 @@ CLI_Args :: struct {
     quit_after_frames: s32 = -1;
 }
 
+animation2d_play :: (entity: *Entity, name: string) {
+    sprite_asset := get(entity.sprite);
+    for * animation : sprite_asset.animations {
+        if equal(animation.name, name) {
+            if entity.animation2d_player.playing && entity.animation2d_player.curr_animation_idx == it_index {
+                return;
+            }
+            entity.animation2d_player.curr_animation_idx = xx it_index;
+            entity.animation2d_player.state = Animation2DState.{current_frame=0, time=0};
+            entity.animation2d_player.playing = true;
+            return;
+        }
+    }
+    log_error("Failed to find animation: %\n", name);
+    exit(1);
+}
+
+animation2d_advance :: (entity: *Entity, dt: float) {
+    player := *entity.animation2d_player;
+    if !player.playing return;
+    state := *player.state;
+    sprite_asset := get(entity.sprite);
+    animation := *sprite_asset.animations[player.curr_animation_idx];
+    state.time += dt;
+    if state.time > animation.frames[state.current_frame].duration {
+        state.time -= animation.frames[state.current_frame].duration;
+        state.current_frame = (state.current_frame + 1) % cast(u32)animation.frames.count;
+        if state.current_frame >= animation.frames.count {
+            state.current_frame = 0;
+        }
+    }
+}
+
+animation2d_stop :: (entity: *Entity) {
+    player := *entity.animation2d_player;
+    player.playing = false;
+}
+
+World :: struct {
+    entities: [..]Entity;
+}
+
+world_update :: (world: *World, dt: float) {
+    for * entity : world.entities {
+        animation2d_advance(entity, dt);
+    }
+}
+
+world: World;
 
 main :: () {
     ok, args, is_set, free_args := parse_arguments(CLI_Args);
@@ -41,10 +93,11 @@ main :: () {
         exit(1);
     }
 
-    entity: Entity;
+    entity := array_add(*world.entities);
     entity.sprite = handle;
     entity.transform.position = .{200, 300, 0};
     entity.transform.scale = 4.0;
+    animation2d_play(entity, "idle_down");
 
     win_w, win_h := window_get_size(*window);
     viewport: Viewport = .{width=win_w, height=win_h};
@@ -54,7 +107,7 @@ main :: () {
     last_ticks := SDL_GetTicks();
     while !should_quit {
         now := SDL_GetTicks();
-        dt := cast(float)(now - last_ticks) / 1000.0;
+        dt := cast(float)(now - last_ticks);
         last_ticks = now;
 
         ev: SDL_Event;
@@ -70,18 +123,37 @@ main :: () {
         }
 
         keys := SDL_GetKeyboardState(null);
-        move_speed := 200.0 * dt;
-        if keys[SDL_Scancode.W] entity.transform.position.y -= move_speed;
-        if keys[SDL_Scancode.S] entity.transform.position.y += move_speed;
-        if keys[SDL_Scancode.A] entity.transform.position.x -= move_speed;
-        if keys[SDL_Scancode.D] entity.transform.position.x += move_speed;
+        move_speed := dt * 0.2;
 
-        sprite_asset := get(handle);
-        frame_sprite := *sprite_asset.animations[0].frames[0].sprite;
-        instance := entity_make_sprite_instance(*entity, frame_sprite);
+        if keys[SDL_Scancode.W] {
+            entity.transform.position.y -= move_speed;
+            animation2d_play(entity, "walk_up");
+        } else if keys[SDL_Scancode.S] {
+            entity.transform.position.y += move_speed;
+            animation2d_play(entity, "walk_down");
+        } else if keys[SDL_Scancode.A] {
+            entity.transform.position.x -= move_speed;
+            animation2d_play(entity, "walk_left");
+        } else if keys[SDL_Scancode.D] {
+            entity.transform.position.x += move_speed;
+            animation2d_play(entity, "walk_right");
+        } else {
+            animation2d_play(entity, "idle_down");
+        }
+
+        world_update(*world, dt);
 
         REN.sprite_renderer_begin_frame(camera.position, camera2d_get_world_to_clip(camera, viewport));
-        REN.sprite_renderer_draw(sprite_asset.texture_view, instance);
+
+        for * entity : world.entities {
+            sprite_asset := get(entity.sprite);
+            anim_player := *entity.animation2d_player;
+            anim_state := *anim_player.state;
+            frame_sprite := *sprite_asset.animations[anim_player.curr_animation_idx].frames[anim_state.current_frame].sprite;
+            instance := entity_make_sprite_instance(entity, frame_sprite);
+            REN.sprite_renderer_draw(sprite_asset.texture_view, instance);
+        }
+
         REN.do_render();
 
         frame_number+=1;

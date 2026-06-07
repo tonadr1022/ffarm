@@ -16,7 +16,6 @@ load_sprite :: (path: string) -> success: bool, handle: SpriteAssetHandle {
     }
     // upload to gpu
     sprite_asset: *SpriteAsset = get(handle);
-    print("frame 0: %\n", sprite_asset.animations[0].frames[0].sprite);
     if !REN.sprite_renderer_upload_sprite(handle) {
         obj_pool_free(*assets.sprites, handle);
         return false, handle;
