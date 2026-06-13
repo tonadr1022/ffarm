@@ -51,11 +51,11 @@ Assets :: struct {
     sprites: ObjectPool(SpriteAsset);
 
     // TODO: compile time generate these based on all the assets
-    tilemaps: ObjectPool(TileMap);
-    tilesets: ObjectPool(TileSet);
+    // tilemaps: ObjectPool(TileMap);
+    // tilesets: ObjectPool(TileSet);
 
-    guid_to_tilemap: Table(Guid, TileMapHandle);
-    guid_to_tileset: Table(Guid, TileSetHandle);
+    guid_to_tilemap: Table(Guid, TileMap);
+    guid_to_tileset: Table(Guid, TileSet);
 
     ref_counts: Table(Guid, s32);
 
@@ -266,24 +266,16 @@ load_asset :: (asset_id: AssetId) -> Guid {
     if record.type == {
         case .TILE_MAP; {
             if !table_find(*assets.guid_to_tilemap, guid) {
-                tm, ok := tilemap_read_cooked(record.cooked_path);
+                asset, ok := tilemap_read_cooked(record.cooked_path);
                 if !ok return "";
-
-                handle := obj_pool_alloc(*assets.tilemaps);
-                get(*assets.tilemaps, handle).* = tm;
-
-                table_add(*assets.guid_to_tilemap, guid, handle);
+                table_add(*assets.guid_to_tilemap, guid, asset);
             }
         }
         case .TILE_SET; {
             if !table_find(*assets.guid_to_tileset, guid) {
                 ts, ok := tileset_read_cooked(record.cooked_path);
                 if !ok return "";
-
-                handle := obj_pool_alloc(*assets.tilesets);
-                get(*assets.tilesets, handle).* = ts;
-
-                table_add(*assets.guid_to_tileset, guid, handle);
+                table_add(*assets.guid_to_tileset, guid, ts);
             }
         }
         case .SPRITE_2D; return "";
@@ -299,15 +291,22 @@ unload_asset :: (guid: Guid) {
     assert(ref_cnt != null);
     ref_cnt.* -= 1;
     assert(ref_cnt.* >= 0);
+
+    for dep : record.dependencies {
+        ok, id := get_guid(dep);
+        assert(ok);
+        unload_asset(id);
+    }
+
     if ref_cnt.* == 0 {
         if record.type == {
             case .TILE_SET; {
-                asset := table_find_pointer(*assets.tilesets, guid);
+                asset := table_find_pointer(*assets.guid_to_tileset, guid);
                 assert(asset != null);
                 tileset_destroy(asset);
             }
             case .TILE_MAP; {
-                asset := table_find_pointer(*assets.tilemaps, guid);
+                asset := table_find_pointer(*assets.guid_to_tilemap, guid);
                 assert(asset != null);
                 tilemap_destroy(asset);
             }

@@ -187,7 +187,7 @@ tileset_import_from_tiled :: (path: string) -> TileSet, bool {
 }
 
 tilemap_destroy :: (tm: *TileMap) {
-    free(tm.data);
+    array_reset(*tm.data);
 }
 
 tilemap_cook :: (raw_path: string, cooked_path: string) -> bool {

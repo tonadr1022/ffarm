@@ -245,6 +245,9 @@ main :: () {
 
     REN.wait_for_device();
 
+    for * entity : world.entities {
+        world_destroy(it_handle);
+    }
     unload_sprite(handle);
 
     assets_shutdown();
