@@ -49,6 +49,16 @@ AssetInfo :: struct {
 
 Assets :: struct {
     sprites: ObjectPool(SpriteAsset);
+
+    // TODO: compile time generate these based on all the assets
+    tilemaps: ObjectPool(TileMap);
+    tilesets: ObjectPool(TileSet);
+
+    guid_to_tilemap: Table(Guid, TileMapHandle);
+    guid_to_tileset: Table(Guid, TileSetHandle);
+
+    ref_counts: Table(Guid, s32);
+
     source_dir: string;
     cooked_dir: string;
     guid_to_asset_record: Table(Guid, AssetRecord);
@@ -58,10 +68,12 @@ Assets :: struct {
 
 AssetRecord :: struct {
     type: AssetType;
+    pool_idx: int;
     raw_format: AssetRawFormatType;
-    guid: string;
+    guid: Guid;
     raw_path: string;
     cooked_path: string;
+    // TODO: use Guid at runtime?
     dependencies: [..]AssetId;
 }
 
@@ -127,7 +139,7 @@ assets_init :: (source_dir: string, cooked_dir: string) {
             record := AssetRecord.{
                 type=asset_type,
                 raw_format=raw_format_type,
-                guid=copy_string(metadata.guid),
+                guid= cast(Guid) copy_string(metadata.guid),
                 raw_path=raw_path,
                 cooked_path=cooked_path
             };
@@ -227,8 +239,83 @@ asset_cook :: (asset_id: AssetId, check_recook_needed := true) -> bool {
     return true;
 }
 
-load_asset :: (asset_id: AssetId) -> bool {
-    return asset_cook(asset_id);
+AssetRef :: struct {
+    guid: Guid;
+    type: AssetType;
+}
+
+load_asset :: (asset_id: AssetId) -> Guid {
+    record := get_asset_record(asset_id);
+    if record == null return "";
+
+    #if DEV { assert(asset_cook(asset_id, true)); }
+
+    for dep : record.dependencies {
+        load_asset(dep);
+    }
+
+    guid := record.guid;
+    ref_cnt := table_find_pointer(*assets.ref_counts, guid);
+    if !ref_cnt {
+        table_add(*assets.ref_counts, guid, 1);
+    } else {
+        ref_cnt.* += 1;
+    }
+
+
+    if record.type == {
+        case .TILE_MAP; {
+            if !table_find(*assets.guid_to_tilemap, guid) {
+                tm, ok := tilemap_read_cooked(record.cooked_path);
+                if !ok return "";
+
+                handle := obj_pool_alloc(*assets.tilemaps);
+                get(*assets.tilemaps, handle).* = tm;
+
+                table_add(*assets.guid_to_tilemap, guid, handle);
+            }
+        }
+        case .TILE_SET; {
+            if !table_find(*assets.guid_to_tileset, guid) {
+                ts, ok := tileset_read_cooked(record.cooked_path);
+                if !ok return "";
+
+                handle := obj_pool_alloc(*assets.tilesets);
+                get(*assets.tilesets, handle).* = ts;
+
+                table_add(*assets.guid_to_tileset, guid, handle);
+            }
+        }
+        case .SPRITE_2D; return "";
+    }
+
+    return record.guid;
+}
+
+unload_asset :: (guid: Guid) {
+    record := get_asset_record(guid);
+    if record == null return;
+    ref_cnt := table_find_pointer(*assets.ref_counts, guid);
+    assert(ref_cnt != null);
+    ref_cnt.* -= 1;
+    assert(ref_cnt.* >= 0);
+    if ref_cnt.* == 0 {
+        if record.type == {
+            case .TILE_SET; {
+                asset := table_find_pointer(*assets.tilesets, guid);
+                assert(asset != null);
+                tileset_destroy(asset);
+            }
+            case .TILE_MAP; {
+                asset := table_find_pointer(*assets.tilemaps, guid);
+                assert(asset != null);
+                tilemap_destroy(asset);
+            }
+            case .SPRITE_2D; {
+                assert(false);
+            }
+        } 
+    }
 }
 
 load_sprite :: (path: string) -> success: bool, handle: SpriteAssetHandle {
@@ -259,6 +346,8 @@ get :: (handle: SpriteAssetHandle) -> *SpriteAsset {
 }
 
 SpriteAssetHandle :: ObjectPool(SpriteAsset).HandleT;
+TileMapHandle :: ObjectPool(TileMap).HandleT;
+TileSetHandle :: ObjectPool(TileSet).HandleT;
 
 get_guid :: (asset_id: AssetId) -> success: bool, Guid {
     ok, val := table_find(*assets.asset_id_to_guid, asset_id);
@@ -294,6 +383,8 @@ get_asset_record :: (asset_id: AssetId) -> *AssetRecord {
     if !ok return null;
     return get_asset_record(guid);
 }
+
+DEV :: true;
 
 #import "Random";
 #import "graphics/sprites";

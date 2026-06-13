@@ -71,7 +71,14 @@ animation2d_stop :: (entity: *Entity) {
 }
 
 World :: struct {
-    entities: [..]Entity;
+    entities: ObjectPool(Entity);
+}
+
+
+EntityHandle :: ObjectPool(Entity).HandleT;
+
+world_init :: (reserve_entity_count: int) {
+    obj_pool_reserve(*world.entities, reserve_entity_count);
 }
 
 world_update :: (world: *World, dt: float) {
@@ -81,6 +88,22 @@ world_update :: (world: *World, dt: float) {
 }
 
 world: World;
+
+world_spawn :: () -> EntityHandle {
+    return obj_pool_alloc(*world.entities);
+}
+
+world_destroy :: (ent: EntityHandle) {
+    e := world_get(ent);
+    if !e return;
+    if e.flags & .TILEMAP {
+        unload_asset(e.tilemap);
+    }
+}
+
+world_get :: (ent: EntityHandle) -> *Entity {
+    return get(*world.entities, ent);
+}
 
 PhysicsWorld :: struct {
     b2world: b2WorldId;
@@ -113,6 +136,8 @@ main :: () {
 
     assets_init(ASSET_SOURCE_DIR, ASSET_COOKED_DIR);
 
+    world_init(10000);
+
     {
         // physics experimenting
         world_def := b2DefaultWorldDef();
@@ -120,7 +145,12 @@ main :: () {
         physics.b2world = b2CreateWorld(*world_def);
     }
 
-    print("load: %\n", load_asset("farm/tilemap-main"));
+    {
+        tilemap_ent := world_spawn();
+        ent := world_get(tilemap_ent);
+        ent.flags |= .TILEMAP;
+        ent.tilemap = load_asset("farm/tilemap-main");
+    }
 
     should_quit := false;
 
@@ -130,11 +160,15 @@ main :: () {
         exit(1);
     }
 
-    entity := array_add(*world.entities);
-    entity.sprite = handle;
-    entity.transform.position = .{200, 300, 0};
-    entity.transform.scale = 4.0;
-    animation2d_play(entity, "idle_down");
+    sprite_ent := world_spawn();
+    {
+        entity := world_get(sprite_ent);
+        entity.flags |= .SPRITE;
+        entity.sprite = handle;
+        entity.transform.position = .{200, 300, 0};
+        entity.transform.scale = 4.0;
+        animation2d_play(entity, "idle_down");
+    }
 
     win_w, win_h := window_get_size(*window);
     viewport: Viewport = .{width=win_w, height=win_h};
@@ -162,20 +196,23 @@ main :: () {
         keys := SDL_GetKeyboardState(null);
         move_speed := dt * 0.2;
 
-        if keys[SDL_Scancode.W] {
-            entity.transform.position.y -= move_speed;
-            animation2d_play(entity, "walk_up");
-        } else if keys[SDL_Scancode.S] {
-            entity.transform.position.y += move_speed;
-            animation2d_play(entity, "walk_down");
-        } else if keys[SDL_Scancode.A] {
-            entity.transform.position.x -= move_speed;
-            animation2d_play(entity, "walk_left");
-        } else if keys[SDL_Scancode.D] {
-            entity.transform.position.x += move_speed;
-            animation2d_play(entity, "walk_right");
-        } else {
-            animation2d_play(entity, "idle_down");
+        {
+            entity := world_get(sprite_ent);
+            if keys[SDL_Scancode.W] {
+                entity.transform.position.y -= move_speed;
+                animation2d_play(entity, "walk_up");
+            } else if keys[SDL_Scancode.S] {
+                entity.transform.position.y += move_speed;
+                animation2d_play(entity, "walk_down");
+            } else if keys[SDL_Scancode.A] {
+                entity.transform.position.x -= move_speed;
+                animation2d_play(entity, "walk_left");
+            } else if keys[SDL_Scancode.D] {
+                entity.transform.position.x += move_speed;
+                animation2d_play(entity, "walk_right");
+            } else {
+                animation2d_play(entity, "idle_down");
+            }
         }
 
         world_update(*world, dt);
@@ -183,13 +220,20 @@ main :: () {
         REN.sprite_renderer_begin_frame(camera.position, camera2d_get_world_to_clip(camera, viewport));
 
         for * entity : world.entities {
-            sprite_asset := get(entity.sprite);
-            anim_player := *entity.animation2d_player;
-            anim_state := *anim_player.state;
-            frame_sprite := *sprite_asset.animations[anim_player.curr_animation_idx].frames[anim_state.current_frame].sprite;
-            instance := entity_make_sprite_instance(entity, frame_sprite);
-            REN.sprite_renderer_draw(sprite_asset.texture_view, instance);
+            if entity.flags & .SPRITE {
+                sprite_asset := get(entity.sprite);
+                anim_player := *entity.animation2d_player;
+                anim_state := *anim_player.state;
+                frame_sprite := *sprite_asset.animations[anim_player.curr_animation_idx].frames[anim_state.current_frame].sprite;
+                instance := entity_make_sprite_instance(entity, frame_sprite);
+                REN.sprite_renderer_draw(sprite_asset.texture_view, instance);
+            }
+
+            if entity.flags & .TILEMAP {
+                // tilemap := get(entity.tilemap);
+            }
         }
+
 
         REN.do_render();
 

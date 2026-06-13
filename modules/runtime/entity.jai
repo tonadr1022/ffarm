@@ -4,10 +4,17 @@ Transform :: struct {
     scale: float = 1.0;
 }
 
+EntityFlags :: enum_flags {
+    SPRITE;
+    TILEMAP;
+}
+
 Entity :: struct {
     transform: Transform;
     sprite: SpriteAssetHandle;
     animation2d_player: Animation2DPlayer;
+    tilemap: Guid;
+    flags: EntityFlags;
 }
 
 entity_make_sprite_instance :: (entity: *Entity, sprite: *Sprite) -> SpriteInstance {

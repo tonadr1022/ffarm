@@ -1,5 +1,5 @@
 TileMap :: struct {
-    using info: AssetInfo;
+    id: Guid;
     len_x, len_y: u32;
     data: [..]s32;
     tileset_id: Guid;
@@ -43,7 +43,7 @@ tilemap_write :: (tm: *TileMap, path: string) -> bool {
     return true;
 }
 
-tilemap_load :: (path: string) -> TileMap, bool {
+tilemap_read_cooked :: (path: string) -> TileMap, bool {
     tm: TileMap;
     f, ok := file_open(path);
     if !ok return tm, false;
@@ -116,8 +116,8 @@ tileset_write :: (ts: *TileSet, path: string) -> bool {
 
     write_cooked_asset_file_header(*f, AssetType.TILE_SET, TILESET_COOKED_VERSION);
 
-    file_write(*f, ts.img_path.data, ts.img_path.count);
     file_write(*f, *ts.img_path.count, size_of(s64));
+    file_write(*f, ts.img_path.data, ts.img_path.count);
     file_write(*f, *ts.img_w, size_of(u32));
     file_write(*f, *ts.img_h, size_of(u32));
     file_write(*f, *ts.tile_count, size_of(u32));
@@ -126,7 +126,7 @@ tileset_write :: (ts: *TileSet, path: string) -> bool {
     return true;
 }
 
-tileset_load :: (path: string) -> TileSet, bool {
+tileset_read_cooked :: (path: string) -> TileSet, bool {
     ts: TileSet;
 
     f, ok := file_open(path);
@@ -147,6 +147,8 @@ tileset_load :: (path: string) -> TileSet, bool {
     file_read(f, *ts.tile_w, size_of(u32));
     file_read(f, *ts.tile_h, size_of(u32));
     assert(file_exists(ts.img_path));
+
+    tileset_upload_gpu(*ts);
 
     return ts, true;
 }
@@ -185,10 +187,7 @@ tileset_import_from_tiled :: (path: string) -> TileSet, bool {
 }
 
 tilemap_destroy :: (tm: *TileMap) {
-    free(tm.path);
-    free(tm.name);
-    tileset_destroy(*tm.tileset);
-    tm.* = .{};
+    free(tm.data);
 }
 
 tilemap_cook :: (raw_path: string, cooked_path: string) -> bool {
@@ -203,12 +202,24 @@ tileset_cook :: (raw_path: string, cooked_path: string) -> bool {
     return tileset_write(*tileset, cooked_path);
 }
 
+tileset_upload_gpu :: (ts: *TileSet) -> bool {
+    ok: bool;
+    print("uploading tileset\n");
+    ts.tex, ts.tex_view, ok = load_img_from_cpu(ts.img_path);
+    return ok;
+}
+
+tileset_destroy_gpu :: (ts: *TileSet) {
+    texture_destroy(ts.tex);
+    texture_view_destroy(ts.tex_view);
+}
+
+tileset_destroy :: (ts: *TileSet) {
+    free(ts.img_path);
+    tileset_destroy_gpu(ts);
+}
+
 #scope_file
-
-all_tilesets: Table(string, TileSet);
-
-INVALID_TILESET_ID :: -1;
-
 
 TiledTilemapData :: struct {
     Layer :: struct {
@@ -255,7 +266,6 @@ TiledTilesetMetadata :: struct {
 
 tilemap_convert_tiled_tileset_to_engine :: (ts: *TileSet, tileset_path: string, tiled: *TiledTilesetMetadata) {
     ts.img_path = join(path_strip_filename(tileset_path), tiled.image);
-    ts.tex, ts.tex_view = load_img_from_cpu(ts.img_path);
     ts.img_w = tiled.imagewidth;
     ts.img_h = tiled.imageheight;
     ts.tile_count = tiled.tilecount;
