@@ -1,0 +1,282 @@
+TileMap :: struct {
+    using info: AssetInfo;
+    len_x, len_y: u32;
+    data: [..]s32;
+    tileset_id: Guid;
+}
+
+TileSet :: struct {
+    img_path: string;
+    tex: TextureHandle;
+    tex_view: TextureViewHandle;
+    img_w, img_h: u32;
+    tile_count: u32;
+    tile_w, tile_h: u32;
+}
+
+TILESET_COOKED_VERSION :: 1;
+TILEMAP_COOKED_VERSION :: 1;
+
+tilemap_set :: (tm: *TileMap, x: u32, y: u32, val: int) {
+    idx := tilemap_get_1d_idx(tm, x, y);
+    assert(idx < tm.data.count);
+    tm.data[idx] = val;
+}
+
+tilemap_get :: (tm: *TileMap, x: u32, y: u32) {
+    return tm.data[tilemap_get_1d_idx(tm, x, y)];
+}
+
+tilemap_write :: (tm: *TileMap, path: string) -> bool {
+    f, ok := file_open(path, true);
+    if !ok return false;
+    defer file_close(*f);
+
+    write_cooked_asset_file_header(*f, AssetType.TILE_MAP, TILEMAP_COOKED_VERSION);
+
+    file_write(*f, *tm.len_x, size_of(u32));
+    file_write(*f, *tm.len_y, size_of(u32));
+    file_write(*f, *tm.data.count, size_of(s64));
+    file_write(*f, tm.data.data, size_of(s32) * data.count);
+    file_write(*f, *tm.tileset_id, size_of(Guid));
+
+    return true;
+}
+
+tilemap_load :: (path: string) -> TileMap, bool {
+    tm: TileMap;
+    f, ok := file_open(path);
+    if !ok return tm, false;
+    defer file_close(*f);
+
+    using,except(path) tm;
+
+    ok = read_cooked_asset_file_header(f, AssetType.TILE_MAP, TILEMAP_COOKED_VERSION);
+    if !ok return tm, false;
+
+    file_read(f, *len_x, size_of(u32));
+    file_read(f, *len_y, size_of(u32));
+    count: s64;
+    file_read(f, *count, size_of(s64));
+    assert(count > 0);
+    array_resize(*tm.data, count);
+    file_read(f, tm.data.data, size_of(s32) * data.count);
+    file_read(f, *tm.tileset_id, size_of(Guid));
+
+    return tm, true;
+}
+
+tilemap_import_from_tiled :: (path: string) -> TileMap, bool {
+    tm: TileMap;
+
+    extension, ok := path_extension(path);
+    if !equal("json", extension) {
+        log_error("invalid tiled tilemap file: %\n", path);
+        return tm, false;
+    }
+
+    // TODO: this leaks memory, used temp allocator
+    tiled: TiledTilemapData;
+    ok, tiled = json_parse_file(path, TiledTilemapData);
+    if !ok {
+        log_error("failed to parse tiled tilemap file: %\n", path);
+        return tm, false;
+    }
+
+    layer := *tiled.layers[0];
+    num_elements := layer.height * layer.width;
+    array_reserve(*tm.data, num_elements);
+    for val : tiled.layers[0].data {
+        array_add(*tm.data, val);
+    }
+    tm.len_x = layer.width;
+    tm.len_y = layer.height;
+
+    // TODO: need to separate out tileset from tile map import. when importing a tile map. the tile set import 
+    // job should be kicked off but separate asset creation.
+    assert(tiled.tilesets.count == 1);
+    tileset_path := join(path_strip_filename(path), tiled.tilesets[0].source,, temp);
+
+    tm.tileset, ok = tileset_import_from_tiled(tileset_path);
+    if !ok {
+        log_error("failed to import tiled tileset %\n", tileset_path);
+        return tm, false;
+    }
+
+    return tm, true;
+}
+
+tileset_write :: (ts: *TileSet, path: string) -> bool {
+    f, ok := file_open(path, true);
+    if !ok return false;
+    defer file_close(*f);
+
+
+    write_cooked_asset_file_header(*f, AssetType.TILE_SET, TILESET_COOKED_VERSION);
+
+    file_write(*f, ts.img_path.data, ts.img_path.count);
+    file_write(*f, *ts.img_path.count, size_of(s64));
+    file_write(*f, *ts.img_w, size_of(u32));
+    file_write(*f, *ts.img_h, size_of(u32));
+    file_write(*f, *ts.tile_count, size_of(u32));
+    file_write(*f, *ts.tile_w, size_of(u32));
+    file_write(*f, *ts.tile_h, size_of(u32));
+    return true;
+}
+
+tileset_load :: (path: string) -> TileSet, bool {
+    ts: TileSet;
+
+    f, ok := file_open(path);
+    if !ok {
+        return ts, false;
+    }
+    defer file_close(*f);
+
+    read_cooked_asset_file_header(f, AssetType.TILE_SET, TILESET_COOKED_VERSION);
+
+    img_path_len: s64;
+    file_read(f, *img_path_len, size_of(s64));
+    ts.img_path = alloc_string(img_path_len);
+    file_read(f, ts.img_path.data, img_path_len);
+    file_read(f, *ts.img_w, size_of(u32));
+    file_read(f, *ts.img_h, size_of(u32));
+    file_read(f, *ts.tile_count, size_of(u32));
+    file_read(f, *ts.tile_w, size_of(u32));
+    file_read(f, *ts.tile_h, size_of(u32));
+    assert(file_exists(ts.img_path));
+
+    return ts, true;
+}
+
+tileset_import_from_tiled :: (path: string) -> TileSet, bool {
+    extension, ok := path_extension(path);
+    if !equal("tsx", extension) {
+        log_error("invalid tiled tileset file: %\n", path);
+        return .{}, false;
+    }
+
+    metadata: TiledTilesetMetadata;
+    root, result := xml_parse_file(path);
+    if result.status != .ok {
+        print("error: %\n", result);
+    }
+
+    for node : root {
+        if equal(node.name, "tileset") {
+            metadata.tilewidth = xx string_to_int(attribute_get_value(node, "tilewidth"));
+            metadata.tileheight = xx string_to_int(attribute_get_value(node, "tileheight"));
+            metadata.tilecount = xx string_to_int(attribute_get_value(node, "tilecount"));
+            metadata.columns = xx string_to_int(attribute_get_value(node, "columns"));
+
+            img_node := node.first_child;
+            metadata.image = copy_string(attribute_get_value(img_node, "source"));
+            metadata.imagewidth = xx string_to_int(attribute_get_value(img_node, "width"));
+            metadata.imageheight = xx string_to_int(attribute_get_value(img_node, "height"));
+        }
+    }
+
+    ts: TileSet = ---;
+    tilemap_convert_tiled_tileset_to_engine(*ts, path, *metadata);
+
+    return ts, true;
+}
+
+tilemap_destroy :: (tm: *TileMap) {
+    free(tm.path);
+    free(tm.name);
+    tileset_destroy(*tm.tileset);
+    tm.* = .{};
+}
+
+
+#scope_file
+
+all_tilesets: Table(string, TileSet);
+
+INVALID_TILESET_ID :: -1;
+
+
+TiledTilemapData :: struct {
+    Layer :: struct {
+        data: [..]s32;
+        height: u32;
+        width: u32;
+        id: s32;
+        name: string;
+        opacity: float;
+    }
+
+    Tileset :: struct {
+        source: string;
+    }
+    height: u32;
+    width: u32;
+    infinite: bool;
+    layers: [..]Layer;
+    tilesets: [..]Tileset;
+    tileheight: u32;
+    tilewidth: u32;
+}
+
+tileset_destroy :: (tileset: *TileSet) {
+    texture_view_destroy(tileset.tex_view);
+    texture_destroy(tileset.tex);
+}
+
+tilemap_cook :: (raw_path: string, cooked_path: string) -> bool {
+    tilemap, ok := tilemap_import_from_tiled(raw_path);
+    if !ok return false;
+    return tilemap_write(*tilemap, cooked_path);
+}
+
+tileset_cook :: (raw_path: string, cooked_path: string) -> bool {
+    tileset, ok := tileset_import_from_tiled(raw_path);
+    if !ok return false;
+    return tileset_write(*tileset, cooked_path);
+}
+
+
+TiledTilesetMetadata :: struct {
+    columns: u32;
+    image: string;
+    imageheight: u32;
+    imagewidth: u32;
+    margin: u32;
+    name: string;
+    spacing: u32;
+    tilecount: u32;
+    //tiledversion: string;
+    tileheight: u32;
+    tilewidth: u32;
+    type: string;
+    version: string;
+}
+
+tilemap_convert_tiled_tileset_to_engine :: (ts: *TileSet, tileset_path: string, tiled: *TiledTilesetMetadata) {
+    ts.img_path = join(path_strip_filename(tileset_path), tiled.image);
+    ts.tex, ts.tex_view = load_img_from_cpu(ts.img_path);
+    ts.img_w = tiled.imagewidth;
+    ts.img_h = tiled.imageheight;
+    ts.tile_count = tiled.tilecount;
+    ts.tile_w = tiled.tilewidth;
+    ts.tile_h = tiled.tileheight;
+}
+
+tilemap_get_1d_idx :: (tm: *TileMap, x: u32, y: u32) {
+    return y * tm.len_x + x;
+}
+
+tilemap_get_2d_coord :: (tm: *TileMap, i: u32) -> x: u32, y: u32 {
+    return i % tm.len_x, i / tm.len_x;
+}
+
+#import "runtime/assets";
+#import "Basic";
+#import "File";
+#import "String";
+#import "jaison";
+#import "graphics/renderer";
+#import "Hash_Table";
+#import "xml";
+#import "File_Utilities";

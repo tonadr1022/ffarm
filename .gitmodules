@@ -7,3 +7,9 @@
 [submodule "third_party/jaison"]
 	path = third_party/jaison
 	url = git@github.com:rluba/jaison.git
+[submodule "third_party/jai-box2d"]
+	path = third_party/box2d
+	url = git@github.com:tonadr1022/jai-box2d.git
+[submodule "third_party/xml"]
+	path = third_party/xml
+	url = git@github.com:smari/jai-xml.git

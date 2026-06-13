@@ -16,9 +16,6 @@ SpriteAsset :: struct {
 }
 
 Sprite :: struct {
-    // TODO: many sprites share this. this is waste
-    texture: TextureHandle;
-    texture_view: TextureViewHandle;
     color: Vector4 = Vector4.{1.0, 1.0, 1.0, 1.0};
     uv_min: Vector2;
     uv_max: Vector2;
@@ -26,8 +23,10 @@ Sprite :: struct {
     frame_h: u32;
 }
 
+#scope_file
+
 #import "Math";
-#import "Hash_Table";
 #import "Basic";
-#import "asset";
 #import "graphics/renderer";
+#import "runtime/assets";
+

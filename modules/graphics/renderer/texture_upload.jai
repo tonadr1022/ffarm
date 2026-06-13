@@ -27,6 +27,33 @@ copy_data_to_texture :: (texture: TextureHandle, data: *void, size: u32) {
     }
 }
 
+load_img_from_cpu :: (path: string) -> TextureHandle, TextureViewHandle, bool {
+    w, h, channels: s32;
+    data := stbi_load(temp_c_string(path), *w, *h, *channels, 4);
+    tex: TextureHandle;
+    view: TextureViewHandle;
+    if !data {
+        print("Failed to load sprite image at path %: %\n", path, to_string(stbi_failure_reason()));
+        return tex, view, false;
+    }
+
+    defer stbi_image_free(data);
+
+    tex = texture_create(*(RHI.TextureDesc.{
+        size=.{xx w, xx h, 1},
+        dimension=.D2,
+        format=RHI.TextureFormat.R8G8B8A8_UNORM,
+        usage=RHI.TextureUsageFlags.SAMPLED,
+    }));
+
+    view = texture_view_create(*(RHI.TextureViewDesc.{
+        texture=get(tex),
+    }));
+
+    return tex, view, true;
+}
+
 #scope_file
 
 RHI :: #import "graphics/rhi";
+#import "stb_image";

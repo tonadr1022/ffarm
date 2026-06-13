@@ -3,3 +3,4 @@ build/
 third_party/jai-sdl3/linux/bin/
 *.so
 *.spirv
+**/cooked/**

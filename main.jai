@@ -1,22 +1,35 @@
 #import "graphics/rhi";
 #import "Basic";
+#import "String";
 #import "platform";
 #import "jai-sdl3";
 #import "Command_Line";
-#import "Hash_Table";
 #import "core/object_pool";
-#import "String";
 
+#import "box2d";
+#import "2d/tilemap";
 #import "runtime/assets";
 #import "runtime/entity";
 #import "game/camera";
 
 #import "graphics/sprites";
+#import "File_Utilities";
 
 REN :: #import "graphics/renderer";
 
 CLI_Args :: struct {
     quit_after_frames: s32 = -1;
+}
+
+find_root_dir :: () -> string, bool {
+    curr_path := get_working_directory();
+    while true {
+        dir := tprint("%/resources", curr_path);
+        print("dir: %\n", dir);
+        if is_directory(dir) return copy_string(curr_path), true;
+        curr_path = path_basename(curr_path);
+    }
+    return .{}, false;
 }
 
 animation2d_play :: (entity: *Entity, name: string) {
@@ -69,7 +82,17 @@ world_update :: (world: *World, dt: float) {
 
 world: World;
 
+PhysicsWorld :: struct {
+    b2world: b2WorldId;
+}
+
+physics: PhysicsWorld;
+
 main :: () {
+    rdir, found := find_root_dir();
+    if !found { print("failed to find root dir\n"); exit(1); }
+    set_working_directory(rdir);
+
     ok, args, is_set, free_args := parse_arguments(CLI_Args);
     if is_set.quit_after_frames {
         print("Quitting after % frames\n", args.quit_after_frames);
@@ -84,6 +107,36 @@ main :: () {
     window: Window;
     window_init(*window, "window", 800, 800);
     REN.init(*window);
+
+    ASSET_SOURCE_DIR :: "resources/assets/source";
+    ASSET_COOKED_DIR :: "resources/assets/cooked";
+
+    assets_init(ASSET_SOURCE_DIR, ASSET_COOKED_DIR);
+
+    {
+        // physics experimenting
+        world_def := b2DefaultWorldDef();
+        world_def.gravity = .{0, -10};
+        physics.b2world = b2CreateWorld(*world_def);
+    }
+
+    {
+        print("load: %\n", load_asset("farm/tilemap-main"));
+        exit(1);
+        // tilemap experimenting
+        tilemap: TileMap;
+        tilemap_path := "./resources/assets/cooked/tilemap-main.tilemap.fasset";
+        if file_exists(tilemap_path) {
+            tilemap, ok = tilemap_load(tilemap_path);
+            print("cooked tm: %\n", tilemap);
+        } else {
+            tilemap, ok = tilemap_import_from_tiled("./resources/assets/farm/tilemap-main.json");
+            tilemap_save(*tilemap, tilemap_path);
+            tm2, ok := tilemap_load(tilemap_path);
+            print("cooked tm first time %\n", tm2);
+        }
+        tilemap_destroy(*tilemap);
+    }
 
     should_quit := false;
 
@@ -166,7 +219,7 @@ main :: () {
 
     unload_sprite(handle);
 
-    REN.shutdown();
+    assets_shutdown();
 
-    print("hello world!\n");
+    REN.shutdown();
 }

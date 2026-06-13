@@ -21,6 +21,13 @@ if [ ! -f "$ROOT/third_party/jai-vma/bindings.jai" ]; then
     jai $ROOT/third_party/jai-vma/generate.jai
 fi
 
+BOX2D_JAI_BINDING_DIR=$ROOT/third_party/box2d
+
+if [ ! -f "$BOX2D_JAI_BINDING_DIR/linux/linux.jai" ]; then
+    jai "$BOX2D_JAI_BINDING_DIR/generate.jai" - -debug
+    cp "$BOX2D_JAI_BINDING_DIR/linux/bin/"* build
+fi
+
 VK_JAI_BINDING_DIR=$ROOT/third_party/Vulkan
 
 if [ ! -f "$VK_JAI_BINDING_DIR/vk.xml" ]; then
