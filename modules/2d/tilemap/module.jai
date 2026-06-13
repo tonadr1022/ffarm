@@ -37,7 +37,7 @@ tilemap_write :: (tm: *TileMap, path: string) -> bool {
     file_write(*f, *tm.len_x, size_of(u32));
     file_write(*f, *tm.len_y, size_of(u32));
     file_write(*f, *tm.data.count, size_of(s64));
-    file_write(*f, tm.data.data, size_of(s32) * data.count);
+    file_write(*f, tm.data.data, size_of(s32) * tm.data.count);
     file_write(*f, *tm.tileset_id, size_of(Guid));
 
     return true;
@@ -94,14 +94,16 @@ tilemap_import_from_tiled :: (path: string) -> TileMap, bool {
 
     // TODO: need to separate out tileset from tile map import. when importing a tile map. the tile set import 
     // job should be kicked off but separate asset creation.
-    assert(tiled.tilesets.count == 1);
+    // assert(tiled.tilesets.count == 1);
     tileset_path := join(path_strip_filename(path), tiled.tilesets[0].source,, temp);
-
-    tm.tileset, ok = tileset_import_from_tiled(tileset_path);
+    tileset_id := asset_get_asset_id_from_proj_dir_path(tileset_path);
+    tileset_guid: Guid;
+    ok, tileset_guid = get_guid(tileset_id);
     if !ok {
-        log_error("failed to import tiled tileset %\n", tileset_path);
+        log_error("failed to obtain tileset for tilemap file: %\n", path);
         return tm, false;
     }
+    tm.tileset_id = tileset_guid;
 
     return tm, true;
 }
@@ -189,6 +191,17 @@ tilemap_destroy :: (tm: *TileMap) {
     tm.* = .{};
 }
 
+tilemap_cook :: (raw_path: string, cooked_path: string) -> bool {
+    tilemap, ok := tilemap_import_from_tiled(raw_path);
+    if !ok return false;
+    return tilemap_write(*tilemap, cooked_path);
+}
+
+tileset_cook :: (raw_path: string, cooked_path: string) -> bool {
+    tileset, ok := tileset_import_from_tiled(raw_path);
+    if !ok return false;
+    return tileset_write(*tileset, cooked_path);
+}
 
 #scope_file
 
@@ -223,19 +236,6 @@ tileset_destroy :: (tileset: *TileSet) {
     texture_view_destroy(tileset.tex_view);
     texture_destroy(tileset.tex);
 }
-
-tilemap_cook :: (raw_path: string, cooked_path: string) -> bool {
-    tilemap, ok := tilemap_import_from_tiled(raw_path);
-    if !ok return false;
-    return tilemap_write(*tilemap, cooked_path);
-}
-
-tileset_cook :: (raw_path: string, cooked_path: string) -> bool {
-    tileset, ok := tileset_import_from_tiled(raw_path);
-    if !ok return false;
-    return tileset_write(*tileset, cooked_path);
-}
-
 
 TiledTilesetMetadata :: struct {
     columns: u32;

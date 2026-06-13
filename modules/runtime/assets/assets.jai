@@ -16,7 +16,7 @@ get_valid_raw_format_extensions :: (raw_format_type: AssetRawFormatType) -> []st
     if raw_format_type == {
         case .INVALID; return .[];
         case .TILED_TILE_MAP; return .[".json"];
-        case .TILED_TILE_SET; return .[".json"];
+        case .TILED_TILE_SET; return .[".tsx"];
         case .PNG; return .[".png"];
     }
     return .[];
@@ -62,6 +62,7 @@ AssetRecord :: struct {
     guid: string;
     raw_path: string;
     cooked_path: string;
+    dependencies: [..]AssetId;
 }
 
 assets_init :: (source_dir: string, cooked_dir: string) {
@@ -70,7 +71,7 @@ assets_init :: (source_dir: string, cooked_dir: string) {
 
     CallbackData :: struct {
         assets: *Assets;
-        load_errors: [..]string;
+        err: bool;
     }
 
     callback_data := CallbackData.{
@@ -83,19 +84,22 @@ assets_init :: (source_dir: string, cooked_dir: string) {
         if (ends_with(info.short_name, ASSET_METADATA_EXTENSION)) {
             ok, metadata := json_parse_file(info.full_name, AssetMetadataFileContents,, temp);
             if !ok {
-                array_add(*cb.load_errors, tprint("Failed to parse asset metadata: %\n", info.full_name));
+                log_error("Failed to parse asset metadata: %\n", info.full_name);
+                cb.err = true;
                 return;
             }
             asset_type: AssetType;
             asset_type, ok = enum_name_to_value(AssetType, metadata.type);
             if !ok {
-                array_add(*cb.load_errors, tprint("Invalid asset type: %\n", metadata.type));
+                log_error("Invalid asset type: %\n", metadata.type);
+                cb.err = true;
                 return;
             }
             raw_format_type: AssetRawFormatType;
             raw_format_type, ok = enum_name_to_value(AssetRawFormatType, metadata.raw_format);
             if !ok {
-                array_add(*cb.load_errors, tprint("Invalid AssetRawFormatType: %\n", metadata.raw_format));
+                log_error("Invalid AssetRawFormatType: %\n", metadata.raw_format);
+                cb.err = true;
                 return;
             }
 
@@ -113,11 +117,12 @@ assets_init :: (source_dir: string, cooked_dir: string) {
             assert(begins_with(base, cb.assets.source_dir)); 
             asset_id := slice(base, cb.assets.source_dir.count + 1, base.count - cb.assets.source_dir.count - 1);
             if raw_path.count == 0 {
-                array_add(*cb.load_errors, tprint("Unable to find raw asset for metadata: %\n",  info.full_name));
+                log_error("Unable to find raw asset for metadata: %\n", info.full_name);
+                cb.err = true;
                 return;
             }
 
-            cooked_path := join(base, get_cooked_extension(asset_type));
+            cooked_path := join(assets.cooked_dir, "/", asset_id, get_cooked_extension(asset_type));
 
             record := AssetRecord.{
                 type=asset_type,
@@ -127,12 +132,21 @@ assets_init :: (source_dir: string, cooked_dir: string) {
                 cooked_path=cooked_path
             };
 
+            for dep: metadata.dependencies {
+                array_add(*record.dependencies, cast(AssetId) dep);
+            }
+
             table_add(*cb.assets.guid_to_asset_record, cast(Guid) copy_string(metadata.guid), record);
             table_add(*cb.assets.asset_id_to_guid, cast(AssetId) copy_string(asset_id), cast(Guid) copy_string(metadata.guid));
         }
     };
 
     visit_files(assets.source_dir, true, *callback_data, callback);
+
+    if callback_data.err {
+        log_error("Erorr while initializing assets, exiting...");
+        exit(1);
+    }
 }
 
 assets_shutdown :: () {
@@ -160,25 +174,46 @@ AssetMetadataFileContents :: struct {
     type: string;
     raw_format: string;
     guid: string;
+    dependencies: [..]string;
 }
 
 asset_needs_recook :: (asset_id: AssetId) -> bool {
     record := get_asset_record(asset_id);
     assert(record != null);
-    if !file_exists(record.cooked_path) {
-        return true;
-    }
-    raw_modtime, raw_size, raw_exists:= file_modtime_and_size(record.raw_path);
+    raw_modtime, raw_size, raw_exists := file_modtime_and_size(record.raw_path);
     assert(raw_exists);
     cooked_modtime, cooked_size, cooked_exists:= file_modtime_and_size(record.cooked_path);
+    if !cooked_exists {
+        return true;
+    }
     return raw_modtime > cooked_modtime;
 }
 
+asset_get_asset_id_from_proj_dir_path :: (path: string) -> AssetId {
+    assert(starts_with(path, assets.source_dir));
+    result := slice(path, assets.source_dir.count + 1, path.count - assets.source_dir.count - 1);
+    while path_extension(result).count > 0 {
+        result = path_strip_extension(result);
+    }
+    return cast(AssetId) result;
+}
+
 asset_cook :: (asset_id: AssetId, check_recook_needed := true) -> bool {
-    if check_recook_needed && !asset_needs_recook(asset_id) return true;
     record := get_asset_record(asset_id);
     assert(record != null);
+
+    for dep: record.dependencies {
+        if !asset_cook(dep) {
+            log_error("Failed to cook dependency asset: %\n of asset: %\n", dep, asset_id);
+            return false;
+        }
+    }
+
+    if check_recook_needed && !asset_needs_recook(asset_id) return true;
+
     cooked_path := record.cooked_path;
+
+    make_directory_if_it_does_not_exist(path_strip_filename(cooked_path,, temp), true);
 
     if record.type == {
         case .SPRITE_2D;
@@ -188,6 +223,8 @@ asset_cook :: (asset_id: AssetId, check_recook_needed := true) -> bool {
         case .TILE_SET;
             return tileset_cook(record.raw_path, record.cooked_path);
     }
+
+    return true;
 }
 
 load_asset :: (asset_id: AssetId) -> bool {
@@ -223,6 +260,10 @@ get :: (handle: SpriteAssetHandle) -> *SpriteAsset {
 
 SpriteAssetHandle :: ObjectPool(SpriteAsset).HandleT;
 
+get_guid :: (asset_id: AssetId) -> success: bool, Guid {
+    ok, val := table_find(*assets.asset_id_to_guid, asset_id);
+    return ok, val;
+}
 
 #scope_file
 
@@ -243,10 +284,6 @@ generate_asset_guid :: () -> string {
         bytes[12], bytes[13], bytes[14], bytes[15]);
 }
 
-get_guid :: (asset_id: AssetId) -> success: bool, Guid {
-    ok, val := table_find(*assets.asset_id_to_guid, asset_id);
-    return ok, val;
-}
 
 get_asset_record :: (guid: Guid) -> *AssetRecord {
     return table_find_pointer(*assets.guid_to_asset_record, guid);
@@ -260,6 +297,7 @@ get_asset_record :: (asset_id: AssetId) -> *AssetRecord {
 
 #import "Random";
 #import "graphics/sprites";
+#import "2d/tilemap";
 #import "core/object_pool";
 REN :: #import "graphics/renderer";
 #import "Basic";

@@ -120,23 +120,7 @@ main :: () {
         physics.b2world = b2CreateWorld(*world_def);
     }
 
-    {
-        print("load: %\n", load_asset("farm/tilemap-main"));
-        exit(1);
-        // tilemap experimenting
-        tilemap: TileMap;
-        tilemap_path := "./resources/assets/cooked/tilemap-main.tilemap.fasset";
-        if file_exists(tilemap_path) {
-            tilemap, ok = tilemap_load(tilemap_path);
-            print("cooked tm: %\n", tilemap);
-        } else {
-            tilemap, ok = tilemap_import_from_tiled("./resources/assets/farm/tilemap-main.json");
-            tilemap_save(*tilemap, tilemap_path);
-            tm2, ok := tilemap_load(tilemap_path);
-            print("cooked tm first time %\n", tm2);
-        }
-        tilemap_destroy(*tilemap);
-    }
+    print("load: %\n", load_asset("farm/tilemap-main"));
 
     should_quit := false;
 

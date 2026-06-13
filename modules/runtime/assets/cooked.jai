@@ -5,6 +5,7 @@ write_cooked_asset_file_header :: (f: *File, type: AssetType, version: u32) -> b
     magic := get_magic(type);
     if !file_write(f, *magic, size_of(type_of(magic))) return false;
     if !file_write(f, *version, size_of(type_of(version))) return false;
+    return true;
 }
 
 read_cooked_asset_file_header :: (f: File, type: AssetType, expected_version: u32) -> bool {
