@@ -12,4 +12,4 @@
 	url = git@github.com:tonadr1022/jai-box2d.git
 [submodule "third_party/xml"]
 	path = third_party/xml
-	url = git@github.com:smari/jai-xml.git
+	url = git@github.com:tonadr1022/jai-xml.git
