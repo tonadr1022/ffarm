@@ -77,7 +77,7 @@ sprite_renderer_upload_sprite :: (sprite: SpriteAssetHandle) -> success: bool {
         texture=get(sprite_asset.texture),
     }));
 
-    copy_data_to_texture(sprite_asset.texture, data, xx (w * h * channels));
+    copy_data_to_texture(sprite_asset.texture, data, xx (w * h * 4));
     return true;
 }
 
@@ -90,10 +90,21 @@ sprite_renderer_render_pass_draw :: (cmd: *RHI.CommandBuffer) {
     cam_buf := frame_gpu_allocator2_alloc(*sprite_renderer.fga, *sprite_renderer.camera);
 
     quick_sort(sprite_renderer.draw_commands, (a: SpriteDrawCommand, b: SpriteDrawCommand) -> s64 {
+        if a.instance.depth < b.instance.depth return -1;
+        if a.instance.depth > b.instance.depth return 1;
         return cast(s64)a.texture_view.index - cast(s64)b.texture_view.index;
     });
 
     RHI.bind_cbv(cmd, get(cam_buf.buf), slot=0, offset_bytes=cam_buf.offset, size_bytes=size_of(CameraUniform));
+
+    total_count := cast(u32) sprite_renderer.draw_commands.count;
+    ensure_instance_buffer_capacity(frame_idx, total_count);
+
+    instance_buf := get(sprite_renderer.instance_buffers[frame_idx]);
+    dest := cast(*SpriteInstance) instance_buf.data;
+    for i: 0..total_count-1 {
+        dest[i] = sprite_renderer.draw_commands[i].instance;
+    }
 
     batch_start := 0;
     while batch_start < sprite_renderer.draw_commands.count {
@@ -106,18 +117,10 @@ sprite_renderer_render_pass_draw :: (cmd: *RHI.CommandBuffer) {
         }
 
         batch_count := cast(u32)(batch_end - batch_start);
-        ensure_instance_buffer_capacity(frame_idx, batch_count);
-
-        instance_buf := get(sprite_renderer.instance_buffers[frame_idx]);
-        instances: []SpriteInstance;
-        instances.data = *sprite_renderer.draw_commands[batch_start].instance;
-        instances.count = batch_count;
-        instances_size := xx (batch_count * size_of(SpriteInstance));
-        memcpy(instance_buf.data, instances.data, instances_size);
 
         RHI.bind_srv_texture_view(cmd, get(batch_texture), slot=1);
-        RHI.bind_srv(cmd, instance_buf, slot=2);
-        RHI.draw(cmd, sprite_renderer.device, renderer_get_bind_pool(), 6, batch_count);
+        RHI.bind_srv(cmd, instance_buf, slot=2, offset_bytes=cast(u32)(batch_start * size_of(SpriteInstance)));
+        RHI.draw(cmd, sprite_renderer.device, renderer_get_bind_pool(), vertex_count=6, instance_count=batch_count);
 
         batch_start = batch_end;
     }

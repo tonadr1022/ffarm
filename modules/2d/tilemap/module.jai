@@ -15,7 +15,7 @@ TileSet :: struct {
 }
 
 TILESET_COOKED_VERSION :: 1;
-TILEMAP_COOKED_VERSION :: 1;
+TILEMAP_COOKED_VERSION :: 2;
 
 tilemap_set :: (tm: *TileMap, x: s32, y: s32, val: s32) {
     idx := tilemap_get_1d_idx(tm, x, y);
@@ -86,10 +86,16 @@ tilemap_import_from_tiled :: (path: string) -> TileMap, bool {
     }
 
     layer := *tiled.layers[0];
+    firstgid := tiled.tilesets[0].firstgid;
     num_elements := layer.height * layer.width;
     array_reserve(*tm.data, num_elements);
     for val : tiled.layers[0].data {
-        array_add(*tm.data, val);
+        tile_id := val & TILED_TILE_ID_MASK;
+        if tile_id == 0 {
+            array_add(*tm.data, 0);
+        } else {
+            array_add(*tm.data, tile_id - firstgid);
+        }
     }
     tm.len_x = layer.width;
     tm.len_y = layer.height;
@@ -229,6 +235,8 @@ tileset_get_uvs :: (ts: *TileSet, val: s32) -> Vector2, Vector2 {
     return Vector2.{min_x, min_y}, Vector2.{max_x, max_y};
 }
 
+TILED_TILE_ID_MASK :: 0x0fffffff;
+
 #scope_file
 
 TiledTilemapData :: struct {
@@ -242,6 +250,7 @@ TiledTilemapData :: struct {
     }
 
     Tileset :: struct {
+        firstgid: s32;
         source: string;
     }
     height: u32;

@@ -165,7 +165,7 @@ main :: () {
         entity := world_get(sprite_ent);
         entity.flags |= .SPRITE;
         entity.sprite = handle;
-        entity.transform.position = .{200, 300, 0};
+        entity.transform.position = .{200, 300, 1};
         entity.transform.scale = 4.0;
         animation2d_play(entity, "idle_down");
     }
@@ -232,15 +232,17 @@ main :: () {
             if entity.flags & .TILEMAP {
                 tm := asset_get_tilemap(entity.tilemap);
                 ts := asset_get_tileset(tm.tileset_id);
+                tile_w := cast(float) ts.tile_w;
+                tile_h := cast(float) ts.tile_h;
                 for y: 0..tm.len_y-1 {
                     for x: 0..tm.len_x-1 {
-                        val := tilemap_get(tm,xx x,xx y);
-                        uv_min, uv_max := tileset_get_uvs(ts, val);
+                        val := tilemap_get(tm, xx x, xx y);
+                        if val == 0 continue;
 
-                        size :: 16;
+                        uv_min, uv_max := tileset_get_uvs(ts, val);
                         instance : REN.SpriteInstance = .{
-                            pos=.{xx (x * size), xx (y * size)},
-                            size=.{size, size},
+                            pos=.{x * tile_w, y * tile_h},
+                            size=.{tile_w, tile_h},
                             uv_min=uv_min,
                             uv_max=uv_max,
                             color=.{1,1,1,1},

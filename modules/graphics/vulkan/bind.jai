@@ -43,9 +43,10 @@ bind_pipeline :: (cmd_buf: *CommandBuffer, pipeline: *Pipeline) {
     vkCmdBindPipeline(cmd_buf.vk_cmd_buffer, VkPipelineBindPoint.GRAPHICS, pipeline.vk_pipeline);
 }
 
-draw :: (cmd_buf: *CommandBuffer, device: *Device, bind_pool: *BindPool, vertex_count: u32, instance_count: u32 = 1) {
+draw :: (cmd_buf: *CommandBuffer, device: *Device, bind_pool: *BindPool,
+         vertex_count: u32, first_vertex: u32 = 0,  instance_count: u32 = 1, first_instance: u32 = 0) {
     flush_binds(cmd_buf, device, bind_pool);
-    vkCmdDraw(cmd_buf.vk_cmd_buffer, vertex_count, instance_count, 0, 0);
+    vkCmdDraw(cmd_buf.vk_cmd_buffer, vertex_count, instance_count, first_vertex, first_instance);
 }
 
 #import "Vulkan";
