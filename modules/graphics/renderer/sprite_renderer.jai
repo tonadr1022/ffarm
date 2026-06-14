@@ -59,25 +59,12 @@ sprite_renderer_draw :: (texture_view: TextureViewHandle, instance: SpriteInstan
 sprite_renderer_upload_sprite :: (sprite: SpriteAssetHandle) -> success: bool {
     sprite_asset: *SpriteAsset = get(sprite);
     assert(sprite_asset != null);
-    w, h, channels: s32;
-    data := stbi_load(temp_c_string(sprite_asset.path), *w, *h, *channels, 4);
-    if !data {
-        print("Failed to load sprite image: %\n", to_string(stbi_failure_reason()));
-        return false;
-    }
-    defer stbi_image_free(data);
-    sprite_asset.texture = texture_create(*(RHI.TextureDesc.{
-        size=.{xx w, xx h, 1},
-        dimension=.D2,
-        format=RHI.TextureFormat.R8G8B8A8_UNORM,
-        usage=RHI.TextureUsageFlags.SAMPLED,
-    }));
+    tex, tex_view, ok := load_img_from_cpu(sprite_asset.path);
+    if !ok return false;
 
-    sprite_asset.texture_view = texture_view_create(*(RHI.TextureViewDesc.{
-        texture=get(sprite_asset.texture),
-    }));
+    sprite_asset.texture = tex;
+    sprite_asset.texture_view = tex_view;
 
-    copy_data_to_texture(sprite_asset.texture, data, xx (w * h * 4));
     return true;
 }
 
