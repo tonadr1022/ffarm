@@ -230,7 +230,25 @@ main :: () {
             }
 
             if entity.flags & .TILEMAP {
-                // tilemap := get(entity.tilemap);
+                tm := asset_get_tilemap(entity.tilemap);
+                ts := asset_get_tileset(tm.tileset_id);
+                for y: 0..tm.len_y-1 {
+                    for x: 0..tm.len_x-1 {
+                        val := tilemap_get(tm,xx x,xx y);
+                        uv_min, uv_max := tileset_get_uvs(ts, val);
+
+                        size :: 16;
+                        instance : REN.SpriteInstance = .{
+                            pos=.{xx (x * size), xx (y * size)},
+                            size=.{size, size},
+                            uv_min=uv_min,
+                            uv_max=uv_max,
+                            color=.{1,1,1,1},
+                            depth=0,
+                        };
+                        REN.sprite_renderer_draw(ts.tex_view, instance);
+                    }
+                }
             }
         }
 

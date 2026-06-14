@@ -50,6 +50,8 @@ load_img_from_cpu :: (path: string) -> TextureHandle, TextureViewHandle, bool {
         texture=get(tex),
     }));
 
+    copy_data_to_texture(tex, data, xx (w * h * channels));
+
     return tex, view, true;
 }
 

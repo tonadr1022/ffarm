@@ -251,7 +251,7 @@ load_asset :: (asset_id: AssetId) -> Guid {
     #if DEV { assert(asset_cook(asset_id, true)); }
 
     for dep : record.dependencies {
-        load_asset(dep);
+        assert(load_asset(dep).count > 0);
     }
 
     guid := record.guid;
@@ -342,6 +342,18 @@ unload_sprite :: (handle: SpriteAssetHandle) {
 
 get :: (handle: SpriteAssetHandle) -> *SpriteAsset {
     return get(*assets.sprites, handle);
+}
+
+asset_get_tilemap :: (handle: Guid) -> *TileMap {
+    result := table_find_pointer(*assets.guid_to_tilemap, handle);
+    assert(result != null);
+    return result;
+}
+
+asset_get_tileset :: (handle: Guid) -> *TileSet {
+    result := table_find_pointer(*assets.guid_to_tileset, handle);
+    assert(result != null);
+    return result;
 }
 
 SpriteAssetHandle :: ObjectPool(SpriteAsset).HandleT;

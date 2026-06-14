@@ -17,13 +17,13 @@ TileSet :: struct {
 TILESET_COOKED_VERSION :: 1;
 TILEMAP_COOKED_VERSION :: 1;
 
-tilemap_set :: (tm: *TileMap, x: u32, y: u32, val: int) {
+tilemap_set :: (tm: *TileMap, x: s32, y: s32, val: s32) {
     idx := tilemap_get_1d_idx(tm, x, y);
     assert(idx < tm.data.count);
     tm.data[idx] = val;
 }
 
-tilemap_get :: (tm: *TileMap, x: u32, y: u32) {
+tilemap_get :: (tm: *TileMap, x: s32, y: s32) -> s32 {
     return tm.data[tilemap_get_1d_idx(tm, x, y)];
 }
 
@@ -38,7 +38,8 @@ tilemap_write :: (tm: *TileMap, path: string) -> bool {
     file_write(*f, *tm.len_y, size_of(u32));
     file_write(*f, *tm.data.count, size_of(s64));
     file_write(*f, tm.data.data, size_of(s32) * tm.data.count);
-    file_write(*f, *tm.tileset_id, size_of(Guid));
+
+    write_string(*f, tm.tileset_id);
 
     return true;
 }
@@ -61,7 +62,8 @@ tilemap_read_cooked :: (path: string) -> TileMap, bool {
     assert(count > 0);
     array_resize(*tm.data, count);
     file_read(f, tm.data.data, size_of(s32) * data.count);
-    file_read(f, *tm.tileset_id, size_of(Guid));
+
+    read_string(f, *tm.tileset_id);
 
     return tm, true;
 }
@@ -116,8 +118,8 @@ tileset_write :: (ts: *TileSet, path: string) -> bool {
 
     write_cooked_asset_file_header(*f, AssetType.TILE_SET, TILESET_COOKED_VERSION);
 
-    file_write(*f, *ts.img_path.count, size_of(s64));
-    file_write(*f, ts.img_path.data, ts.img_path.count);
+    write_string(*f, ts.img_path);
+
     file_write(*f, *ts.img_w, size_of(u32));
     file_write(*f, *ts.img_h, size_of(u32));
     file_write(*f, *ts.tile_count, size_of(u32));
@@ -137,10 +139,7 @@ tileset_read_cooked :: (path: string) -> TileSet, bool {
 
     read_cooked_asset_file_header(f, AssetType.TILE_SET, TILESET_COOKED_VERSION);
 
-    img_path_len: s64;
-    file_read(f, *img_path_len, size_of(s64));
-    ts.img_path = alloc_string(img_path_len);
-    file_read(f, ts.img_path.data, img_path_len);
+    read_string(f, *ts.img_path);
     file_read(f, *ts.img_w, size_of(u32));
     file_read(f, *ts.img_h, size_of(u32));
     file_read(f, *ts.tile_count, size_of(u32));
@@ -204,7 +203,6 @@ tileset_cook :: (raw_path: string, cooked_path: string) -> bool {
 
 tileset_upload_gpu :: (ts: *TileSet) -> bool {
     ok: bool;
-    print("uploading tileset\n");
     ts.tex, ts.tex_view, ok = load_img_from_cpu(ts.img_path);
     return ok;
 }
@@ -217,6 +215,18 @@ tileset_destroy_gpu :: (ts: *TileSet) {
 tileset_destroy :: (ts: *TileSet) {
     free(ts.img_path);
     tileset_destroy_gpu(ts);
+}
+
+tileset_get_uvs :: (ts: *TileSet, val: s32) -> Vector2, Vector2 {
+    x, y := tileset_get_2d_coord(ts, val);
+
+    min_x := cast(float) x * ts.tile_w / cast(float) ts.img_w;
+    min_y := cast(float) y * ts.tile_h / cast(float) ts.img_h;
+
+    max_x := cast(float) (x + 1) * ts.tile_w / cast(float) ts.img_w;
+    max_y := cast(float) (y + 1) * ts.tile_h / cast(float) ts.img_h;
+
+    return Vector2.{min_x, min_y}, Vector2.{max_x, max_y};
 }
 
 #scope_file
@@ -241,11 +251,6 @@ TiledTilemapData :: struct {
     tilesets: [..]Tileset;
     tileheight: u32;
     tilewidth: u32;
-}
-
-tileset_destroy :: (tileset: *TileSet) {
-    texture_view_destroy(tileset.tex_view);
-    texture_destroy(tileset.tex);
 }
 
 TiledTilesetMetadata :: struct {
@@ -273,20 +278,42 @@ tilemap_convert_tiled_tileset_to_engine :: (ts: *TileSet, tileset_path: string, 
     ts.tile_h = tiled.tileheight;
 }
 
-tilemap_get_1d_idx :: (tm: *TileMap, x: u32, y: u32) {
-    return y * tm.len_x + x;
+tilemap_get_1d_idx :: (tm: *TileMap, x: s32, y: s32) -> s32 {
+    return y * xx tm.len_x + x;
 }
 
-tilemap_get_2d_coord :: (tm: *TileMap, i: u32) -> x: u32, y: u32 {
-    return i % tm.len_x, i / tm.len_x;
+tilemap_get_2d_coord :: (tm: *TileMap, i: s32) -> x: s32, y: s32 {
+    return i % xx tm.len_x, i / xx tm.len_x;
 }
 
-#import "runtime/assets";
+tileset_get_2d_coord :: (ts: *TileSet, i: s32) -> x: s32, y: s32 {
+    tiles_x := ts.img_w / ts.tile_w;
+    tiles_y := ts.img_h / ts.tile_h;
+    return i % xx tiles_x, i / xx tiles_x;
+}
+
+read_string :: (f: File, out: *string) -> bool {
+    len: s64;
+    if !file_read(f, *len, size_of(type_of(len))) return false;
+    out.* = alloc_string(len);
+    return file_read(f, out.data, len);
+}
+
+write_string :: (f: *File, str: string) -> bool {
+    if !file_write(f, *str.count, size_of(type_of(str.count))) return false;
+    if !file_write(f, str.data, str.count) return false;
+    return true;
+}
+
 #import "Basic";
 #import "File";
 #import "String";
-#import "jaison";
-#import "graphics/renderer";
 #import "Hash_Table";
-#import "xml";
+#import "Math";
 #import "File_Utilities";
+
+#import "jaison";
+#import "xml";
+
+#import "graphics/renderer";
+#import "runtime/assets";
