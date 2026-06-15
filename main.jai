@@ -234,6 +234,7 @@ main :: () {
                 ts := asset_get_tileset(tm.tileset_id);
                 tile_w := cast(float) ts.tile_w;
                 tile_h := cast(float) ts.tile_h;
+                img := asset_get_image(ts.img_id);
                 for y: 0..tm.len_y-1 {
                     for x: 0..tm.len_x-1 {
                         val := tilemap_get(tm, xx x, xx y);
@@ -248,7 +249,7 @@ main :: () {
                             color=.{1,1,1,1},
                             depth=0,
                         };
-                        REN.sprite_renderer_draw(ts.tex_view, instance);
+                        REN.sprite_renderer_draw(img.tex_view, instance);
                     }
                 }
             }

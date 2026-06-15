@@ -1,5 +1,6 @@
 AssetType :: enum {
     INVALID;
+    IMAGE;
     SPRITE_2D;
     TILE_MAP;
     TILE_SET;
@@ -27,7 +28,7 @@ get_cooked_extension :: (t: AssetType) -> string {
     a: string;
     if t == {
         case .INVALID; return "";
-        case .SPRITE_2D; a = ".png";
+        case .IMAGE; a = ".png";
         case .TILE_MAP;  a = ".tilemap";
         case .TILE_SET;  a = ".tileset";
     }
@@ -36,16 +37,6 @@ get_cooked_extension :: (t: AssetType) -> string {
 
 Guid :: #type,isa string;
 AssetId :: #type,isa string;
-
-AssetHandle :: struct {
-    guid: string;
-    type: AssetType;
-}
-
-AssetInfo :: struct {
-    name: string;
-    path: string;
-}
 
 Assets :: struct {
     sprites: ObjectPool(SpriteAsset);
@@ -56,6 +47,7 @@ Assets :: struct {
 
     guid_to_tilemap: Table(Guid, TileMap);
     guid_to_tileset: Table(Guid, TileSet);
+    guid_to_image: Table(Guid, Image);
 
     ref_counts: Table(Guid, s32);
 
@@ -166,14 +158,9 @@ assets_shutdown :: () {
     free(assets.cooked_dir);
 }
 
-// returns temp string
-assets_get_full_cooked_path :: (asset: AssetHandle) -> string {
-    return path_join(assets.cooked_dir, asset.name,, temp);
-}
-
-// returns temp string
-assets_get_full_source_path :: (asset: AssetHandle) -> string {
-    return path_join(assets.source_dir, asset.name,, temp);
+// TODO: remove this
+AssetInfo :: struct {
+    path: string;
 }
 
 AssetRawFormat :: struct {
@@ -207,7 +194,7 @@ asset_get_asset_id_from_proj_dir_path :: (path: string) -> AssetId {
     while path_extension(result).count > 0 {
         result = path_strip_extension(result);
     }
-    return cast(AssetId) result;
+    return cast(AssetId) path_to_string(parse_path(result));
 }
 
 asset_cook :: (asset_id: AssetId, check_recook_needed := true) -> bool {
@@ -228,8 +215,8 @@ asset_cook :: (asset_id: AssetId, check_recook_needed := true) -> bool {
     make_directory_if_it_does_not_exist(path_strip_filename(cooked_path,, temp), true);
 
     if record.type == {
-        case .SPRITE_2D;
-            return false;
+        case .IMAGE;
+            return image_cook(record.raw_path, record.cooked_path);
         case .TILE_MAP;
             return tilemap_cook(record.raw_path, record.cooked_path);
         case .TILE_SET;
@@ -237,11 +224,6 @@ asset_cook :: (asset_id: AssetId, check_recook_needed := true) -> bool {
     }
 
     return true;
-}
-
-AssetRef :: struct {
-    guid: Guid;
-    type: AssetType;
 }
 
 load_asset :: (asset_id: AssetId) -> Guid {
@@ -278,7 +260,13 @@ load_asset :: (asset_id: AssetId) -> Guid {
                 table_add(*assets.guid_to_tileset, guid, ts);
             }
         }
-        case .SPRITE_2D; return "";
+        case .IMAGE; {
+            if !table_find(*assets.guid_to_image, guid) {
+                ts, ok := image_read_cooked(record.cooked_path);
+                if !ok return "";
+                table_add(*assets.guid_to_image, guid, ts);
+            }
+        }
     }
 
     return record.guid;
@@ -310,8 +298,10 @@ unload_asset :: (guid: Guid) {
                 assert(asset != null);
                 tilemap_destroy(asset);
             }
-            case .SPRITE_2D; {
-                assert(false);
+            case .IMAGE; {
+                asset := table_find_pointer(*assets.guid_to_image, guid);
+                assert(asset != null);
+                image_destroy(asset);
             }
         } 
     }
@@ -352,6 +342,12 @@ asset_get_tilemap :: (handle: Guid) -> *TileMap {
 
 asset_get_tileset :: (handle: Guid) -> *TileSet {
     result := table_find_pointer(*assets.guid_to_tileset, handle);
+    assert(result != null);
+    return result;
+}
+
+asset_get_image :: (handle: Guid) -> *Image {
+    result := table_find_pointer(*assets.guid_to_image, handle);
     assert(result != null);
     return result;
 }
@@ -399,12 +395,12 @@ DEV :: true;
 
 #import "Random";
 #import "graphics/sprites";
+#import "runtime/assets/image";
 #import "2d/tilemap";
 #import "core/object_pool";
 REN :: #import "graphics/renderer";
 #import "Basic";
 #import "String";
-#import "File_Utilities";
 #import "File_Utilities";
 #import "jaison";
 #import "Reflection";
